@@ -1,3 +1,4 @@
+// src/screens/HomeScreen.js
 import React from 'react';
 import {
     SafeAreaView,
@@ -116,7 +117,10 @@ const HomeScreen = ({ navigation }) => {
                 {/* Enhanced Track Complaint Card */}
                 <TouchableOpacity
                     style={[styles.card, styles.secondaryCard]}
-                    onPress={() => console.log('Navigate to Track Complaint')}
+                    // ====================================================================
+                    // CORRECTION APPLIQUÉE ICI
+                    // ====================================================================
+                    onPress={() => navigation.navigate('TrackComplaint')}
                     activeOpacity={0.9}>
                     <View style={styles.cardHeader}>
                         <View style={[styles.cardIconContainer, styles.secondaryIconContainer]}>
