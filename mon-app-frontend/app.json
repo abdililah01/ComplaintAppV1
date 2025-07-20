@@ -7,12 +7,16 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
 
-
-    "splash": {
-      "image": "./src/assets/images/LOGO_.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#3A4F53"
-    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/new-splash.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#3A4F53"
+        }
+      ]
+    ],
 
     "assetBundlePatterns": [
       "**/*"
