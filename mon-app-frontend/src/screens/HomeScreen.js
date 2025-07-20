@@ -1,3 +1,4 @@
+// src/screens/HomeScreen.js
 import React from 'react';
 import {
     SafeAreaView,
@@ -8,7 +9,10 @@ import {
     StatusBar,
     ScrollView,
     Image,
+    ImageBackground,
 } from 'react-native';
+// If you're using react-native-svg, uncomment the line below
+// import { SvgUri } from 'react-native-svg';
 
 // ====================================================================
 // NOUVELLE PALETTE DE COULEURS - VERT ARDOISE & OR MOUTARDE
@@ -16,10 +20,8 @@ import {
 const colors = {
     background: '#f8fafc',
     white: '#FFFFFF',
-    accent: '#CCA43B',      // Nouveau : Or moutarde sobre
-    primary: '#3A4F53',     // Nouveau : Vert ardoise foncé
-
-    // Neutres pour le texte et les bordures
+    accent: '#CCA43B',
+    primary: '#3A4F53',
     textPrimary: '#1a202c',
     textSecondary: '#718096',
     border: '#e2e8f0',
@@ -31,23 +33,50 @@ const HomeScreen = ({ navigation }) => {
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
-            {/* Header mis à jour avec la nouvelle couleur primaire */}
-            <View style={styles.header}>
+            {/* ====== HEADER with background image ====== */}
+            <ImageBackground
+                source={require('../assets/images/bk.png')}
+                style={styles.header}
+                resizeMode="cover"
+            >
+                {/* Gradient overlay for better visual depth */}
+                <View style={styles.headerOverlay} />
+                <View style={styles.headerGradientOverlay} />
+
                 <View style={styles.headerContent}>
+                    {/* Left logo with enhanced styling */}
+                    <View style={styles.logoContainer}>
+                        <View style={styles.logoInnerGlow} />
+                        <Image
+                            source={require('../assets/images/LOGO_.png')}
+                            style={styles.logo}
+                            resizeMode="contain"
+                        />
+                    </View>
+
+                    {/* Centered text with enhanced typography */}
                     <View style={styles.headerTextContainer}>
-                        <Text style={styles.headerTitle}>رئاسة النيابة العامة</Text>
+                        <View style={styles.titleContainer}>
+                            <Text style={styles.headerTitle}>رئاسة النيابة العامة</Text>
+                            <View style={styles.titleUnderline} />
+                        </View>
                         <Text style={styles.headerSubtitle}>المملكة المغربية</Text>
                     </View>
+
+                    {/* Right logo with enhanced styling */}
                     <View style={styles.logoContainer}>
+                        <View style={styles.logoInnerGlow} />
                         <Image
                             source={require('../assets/images/logo_morocco.png')}
                             style={styles.logo}
+                            resizeMode="contain"
                         />
                     </View>
                 </View>
-            </View>
+            </ImageBackground>
 
-            {/* Stats Bar mis à jour */}
+            {/* ================================================ */}
+
             <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
                     <Text style={styles.statNumber}>24/7</Text>
@@ -69,7 +98,6 @@ const HomeScreen = ({ navigation }) => {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Welcome Message mis à jour */}
                 <View style={styles.welcomeCard}>
                     <Text style={styles.welcomeTitle}>مرحبا بكم في الخدمة الرقمية</Text>
                     <Text style={styles.welcomeDescription}>
@@ -77,11 +105,11 @@ const HomeScreen = ({ navigation }) => {
                     </Text>
                 </View>
 
-                {/* Submit Complaint Card mis à jour */}
                 <TouchableOpacity
                     style={[styles.card, styles.primaryCard]}
                     onPress={() => navigation.navigate('ComplaintForm')}
-                    activeOpacity={0.9}>
+                    activeOpacity={0.9}
+                >
                     <View style={styles.cardHeader}>
                         <View style={[styles.cardIconContainer, styles.primaryIconContainer]}>
                             <Text style={styles.cardIcon}>📝</Text>
@@ -100,11 +128,11 @@ const HomeScreen = ({ navigation }) => {
                     </View>
                 </TouchableOpacity>
 
-                {/* Track Complaint Card mis à jour */}
                 <TouchableOpacity
                     style={[styles.card, styles.secondaryCard]}
                     onPress={() => navigation.navigate('TrackComplaint')}
-                    activeOpacity={0.9}>
+                    activeOpacity={0.9}
+                >
                     <View style={styles.cardHeader}>
                         <View style={[styles.cardIconContainer, styles.secondaryIconContainer]}>
                             <Text style={styles.cardIcon}>🔍</Text>
@@ -124,7 +152,6 @@ const HomeScreen = ({ navigation }) => {
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* Footer mis à jour */}
             <View style={styles.footer}>
                 <View style={styles.footerContent}>
                     <Text style={styles.footerText}>© رئاسة النيابة العامة 2025</Text>
@@ -135,49 +162,111 @@ const HomeScreen = ({ navigation }) => {
     );
 };
 
-// ====================================================================
-// FEUILLE DE STYLE MISE À JOUR AVEC LA NOUVELLE PALETTE
-// ====================================================================
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
     },
     header: {
-        backgroundColor: colors.primary, // MISE À JOUR
-        paddingTop: 20,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
+        paddingTop: 25,
+        paddingBottom: 25,
+        paddingHorizontal: 24,
+        position: 'relative',
+        minHeight: 120,
+        overflow: 'hidden',
+    },
+    headerOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(58, 79, 83, 0.4)',
+    },
+    headerGradientOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        background: 'linear-gradient(135deg, rgba(58, 79, 83, 0.6) 0%, rgba(204, 164, 59, 0.3) 100%)',
+        // For React Native, we simulate gradient with multiple overlays
+        backgroundColor: 'rgba(58, 79, 83, 0.2)',
+    },
+    titleContainer: {
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    titleUnderline: {
+        width: 60,
+        height: 3,
+        backgroundColor: 'rgba(204, 164, 59, 0.8)',
+        borderRadius: 2,
+        marginTop: 4,
+        shadowColor: colors.accent,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    logoInnerGlow: {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 31,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        shadowColor: colors.white,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
     },
     headerContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        zIndex: 2,
+        position: 'relative',
+        paddingVertical: 8,
     },
     headerTextContainer: {
         flex: 1,
+        paddingHorizontal: 20,
+        alignItems: 'center',
     },
     headerTitle: {
         fontSize: 22,
-        fontWeight: '800',
+        fontWeight: '900',
         color: colors.white,
-        textAlign: 'left',
-        marginBottom: 2,
+        textAlign: 'center',
+        marginBottom: 4,
+        textShadowColor: 'rgba(0, 0, 0, 0.5)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+        letterSpacing: 0.5,
+        lineHeight: 28,
     },
     headerSubtitle: {
-        fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.8)',
-        textAlign: 'left',
+        fontSize: 15,
+        color: 'rgba(255, 255, 255, 0.95)',
+        textAlign: 'center',
+        textShadowColor: 'rgba(0, 0, 0, 0.4)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+        fontWeight: '600',
+        letterSpacing: 0.3,
     },
     logoContainer: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 30,
-        padding: 8,
+        width: 62,
+        height: 62,
+        borderRadius: 31,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2.5,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        // Add subtle inner shadow effect
+        position: 'relative',
+        overflow: 'hidden',
     },
     logo: {
-        width: 50,
-        height: 50,
-        resizeMode: 'contain',
+        width: 45,
+        height: 45,
+        borderRadius: 22.5,
     },
     statsContainer: {
         flexDirection: 'row',
@@ -196,7 +285,7 @@ const styles = StyleSheet.create({
     statNumber: {
         fontSize: 16,
         fontWeight: '700',
-        color: colors.primary, // MISE À JOUR
+        color: colors.primary,
         marginBottom: 2,
     },
     statLabel: {
@@ -219,7 +308,7 @@ const styles = StyleSheet.create({
         padding: 20,
         marginBottom: 24,
         borderLeftWidth: 5,
-        borderLeftColor: colors.primary, // MISE À JOUR
+        borderLeftColor: colors.primary,
         elevation: 2,
         shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 1 },
@@ -254,12 +343,12 @@ const styles = StyleSheet.create({
     },
     primaryCard: {
         borderTopWidth: 5,
-        borderTopColor: colors.primary, // MISE À JOUR
+        borderTopColor: colors.primary,
         borderLeftWidth: 0,
     },
     secondaryCard: {
         borderTopWidth: 5,
-        borderTopColor: colors.accent, // MISE À JOUR
+        borderTopColor: colors.accent,
         borderLeftWidth: 0,
     },
     cardHeader: {
@@ -276,22 +365,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     primaryIconContainer: {
-        backgroundColor: 'rgba(58, 79, 83, 0.1)', // Couleur primaire très claire
+        backgroundColor: 'rgba(58, 79, 83, 0.1)',
     },
     secondaryIconContainer: {
-        backgroundColor: 'rgba(204, 164, 59, 0.1)', // Couleur accent très claire
+        backgroundColor: 'rgba(204, 164, 59, 0.1)',
     },
     cardIcon: {
         fontSize: 28,
     },
     cardBadge: {
-        backgroundColor: colors.primary, // MISE À JOUR
+        backgroundColor: colors.primary,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 12,
     },
     secondaryBadge: {
-        backgroundColor: colors.accent, // MISE À JOUR
+        backgroundColor: colors.accent,
     },
     cardBadgeText: {
         color: colors.white,
@@ -320,10 +409,10 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     primaryButton: {
-        backgroundColor: colors.primary, // MISE À JOUR
+        backgroundColor: colors.primary,
     },
     secondaryButton: {
-        backgroundColor: colors.accent, // MISE À JOUR
+        backgroundColor: colors.accent,
     },
     cardButtonText: {
         color: colors.white,
@@ -337,7 +426,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     footer: {
-        backgroundColor: colors.primary, // MISE À JOUR
+        backgroundColor: colors.primary,
         paddingVertical: 20,
         paddingHorizontal: 20,
     },
