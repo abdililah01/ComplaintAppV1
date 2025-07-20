@@ -1,4 +1,3 @@
-// src/screens/HomeScreen.js
 import React from 'react';
 import {
     SafeAreaView,
@@ -11,32 +10,29 @@ import {
     Image,
 } from 'react-native';
 
-// Enhanced professional color palette
+// ====================================================================
+// NOUVELLE PALETTE DE COULEURS - VERT ARDOISE & OR MOUTARDE
+// ====================================================================
 const colors = {
-    background: '#f8fafc',       // Cleaner background
-    textPrimary: '#1e293b',      // Darker, more professional text
-    textSecondary: '#64748b',    // Professional secondary text
-    header: '#1e3a8a',           // Professional blue header
-    headerSecondary: '#3b82f6',  // Lighter blue for gradients
-    accent: '#fef3c7',           // Warm accent for icons
-    accentStrong: '#f59e0b',     // Stronger accent
-    footer: '#1e293b',           // Professional dark footer
-    white: '#ffffff',
+    background: '#f8fafc',
+    white: '#FFFFFF',
+    accent: '#CCA43B',      // Nouveau : Or moutarde sobre
+    primary: '#3A4F53',     // Nouveau : Vert ardoise foncé
+
+    // Neutres pour le texte et les bordures
+    textPrimary: '#1a202c',
+    textSecondary: '#718096',
     border: '#e2e8f0',
-    cardShadow: '#64748b',
-    success: '#10b981',
-    warning: '#f59e0b',
-    error: '#ef4444',
+    cardShadow: '#a0aec0',
 };
 
 const HomeScreen = ({ navigation }) => {
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor={colors.header} />
+            <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
-            {/* Enhanced Header with gradient effect */}
+            {/* Header mis à jour avec la nouvelle couleur primaire */}
             <View style={styles.header}>
-                <View style={styles.headerGradient} />
                 <View style={styles.headerContent}>
                     <View style={styles.headerTextContainer}>
                         <Text style={styles.headerTitle}>رئاسة النيابة العامة</Text>
@@ -51,7 +47,7 @@ const HomeScreen = ({ navigation }) => {
                 </View>
             </View>
 
-            {/* Professional Stats Bar */}
+            {/* Stats Bar mis à jour */}
             <View style={styles.statsContainer}>
                 <View style={styles.statItem}>
                     <Text style={styles.statNumber}>24/7</Text>
@@ -73,7 +69,7 @@ const HomeScreen = ({ navigation }) => {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Welcome Message */}
+                {/* Welcome Message mis à jour */}
                 <View style={styles.welcomeCard}>
                     <Text style={styles.welcomeTitle}>مرحبا بكم في الخدمة الرقمية</Text>
                     <Text style={styles.welcomeDescription}>
@@ -81,7 +77,7 @@ const HomeScreen = ({ navigation }) => {
                     </Text>
                 </View>
 
-                {/* Enhanced Submit Complaint Card */}
+                {/* Submit Complaint Card mis à jour */}
                 <TouchableOpacity
                     style={[styles.card, styles.primaryCard]}
                     onPress={() => navigation.navigate('ComplaintForm')}
@@ -98,28 +94,15 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.cardDescription}>
                         قدم شكايتك بسهولة وأمان. نظام متطور لضمان سرية وسرعة المعالجة
                     </Text>
-                    <View style={styles.cardFeatures}>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>🔒</Text>
-                            <Text style={styles.featureText}>آمن ومحمي</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>⚡</Text>
-                            <Text style={styles.featureText}>معالجة سريعة</Text>
-                        </View>
-                    </View>
                     <View style={[styles.cardButton, styles.primaryButton]}>
                         <Text style={styles.cardButtonText}>إبدأ الآن</Text>
                         <Text style={styles.buttonArrow}>←</Text>
                     </View>
                 </TouchableOpacity>
 
-                {/* Enhanced Track Complaint Card */}
+                {/* Track Complaint Card mis à jour */}
                 <TouchableOpacity
                     style={[styles.card, styles.secondaryCard]}
-                    // ====================================================================
-                    // CORRECTION APPLIQUÉE ICI
-                    // ====================================================================
                     onPress={() => navigation.navigate('TrackComplaint')}
                     activeOpacity={0.9}>
                     <View style={styles.cardHeader}>
@@ -134,43 +117,14 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.cardDescription}>
                         تابع حالة شكايتك وآخر التطورات في الوقت الفعلي
                     </Text>
-                    <View style={styles.cardFeatures}>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>📊</Text>
-                            <Text style={styles.featureText}>تحديثات فورية</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>📱</Text>
-                            <Text style={styles.featureText}>إشعارات ذكية</Text>
-                        </View>
-                    </View>
                     <View style={[styles.cardButton, styles.secondaryButton]}>
                         <Text style={styles.cardButtonText}>تتبع الآن</Text>
                         <Text style={styles.buttonArrow}>←</Text>
                     </View>
                 </TouchableOpacity>
-
-                {/* Additional Services Card */}
-                <View style={styles.servicesCard}>
-                    <Text style={styles.servicesTitle}>خدمات إضافية</Text>
-                    <View style={styles.servicesList}>
-                        <TouchableOpacity style={styles.serviceItem}>
-                            <Text style={styles.serviceIcon}>📞</Text>
-                            <Text style={styles.serviceText}>تواصل معنا</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.serviceItem}>
-                            <Text style={styles.serviceIcon}>❓</Text>
-                            <Text style={styles.serviceText}>الأسئلة الشائعة</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.serviceItem}>
-                            <Text style={styles.serviceIcon}>📋</Text>
-                            <Text style={styles.serviceText}>دليل الاستخدام</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
             </ScrollView>
 
-            {/* Enhanced Footer */}
+            {/* Footer mis à jour */}
             <View style={styles.footer}>
                 <View style={styles.footerContent}>
                     <Text style={styles.footerText}>© رئاسة النيابة العامة 2025</Text>
@@ -181,31 +135,19 @@ const HomeScreen = ({ navigation }) => {
     );
 };
 
+// ====================================================================
+// FEUILLE DE STYLE MISE À JOUR AVEC LA NOUVELLE PALETTE
+// ====================================================================
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,
     },
     header: {
-        backgroundColor: colors.header,
+        backgroundColor: colors.primary, // MISE À JOUR
         paddingTop: 20,
         paddingBottom: 20,
         paddingHorizontal: 20,
-        position: 'relative',
-        elevation: 8,
-        shadowColor: colors.header,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    headerGradient: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: colors.headerSecondary,
-        opacity: 0.1,
     },
     headerContent: {
         flexDirection: 'row',
@@ -254,7 +196,7 @@ const styles = StyleSheet.create({
     statNumber: {
         fontSize: 16,
         fontWeight: '700',
-        color: colors.header,
+        color: colors.primary, // MISE À JOUR
         marginBottom: 2,
     },
     statLabel: {
@@ -276,8 +218,8 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         padding: 20,
         marginBottom: 24,
-        borderLeftWidth: 4,
-        borderLeftColor: colors.header,
+        borderLeftWidth: 5,
+        borderLeftColor: colors.primary, // MISE À JOUR
         elevation: 2,
         shadowColor: colors.cardShadow,
         shadowOffset: { width: 0, height: 1 },
@@ -304,19 +246,21 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         borderWidth: 1,
         borderColor: colors.border,
-        elevation: 6,
+        elevation: 4,
         shadowColor: colors.cardShadow,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 8,
     },
     primaryCard: {
-        borderLeftWidth: 4,
-        borderLeftColor: colors.header,
+        borderTopWidth: 5,
+        borderTopColor: colors.primary, // MISE À JOUR
+        borderLeftWidth: 0,
     },
     secondaryCard: {
-        borderLeftWidth: 4,
-        borderLeftColor: colors.textSecondary,
+        borderTopWidth: 5,
+        borderTopColor: colors.accent, // MISE À JOUR
+        borderLeftWidth: 0,
     },
     cardHeader: {
         flexDirection: 'row',
@@ -325,33 +269,29 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     cardIconContainer: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
     },
     primaryIconContainer: {
-        backgroundColor: colors.accent,
-        borderWidth: 2,
-        borderColor: colors.accentStrong,
+        backgroundColor: 'rgba(58, 79, 83, 0.1)', // Couleur primaire très claire
     },
     secondaryIconContainer: {
-        backgroundColor: '#f1f5f9',
-        borderWidth: 2,
-        borderColor: colors.textSecondary,
+        backgroundColor: 'rgba(204, 164, 59, 0.1)', // Couleur accent très claire
     },
     cardIcon: {
-        fontSize: 32,
+        fontSize: 28,
     },
     cardBadge: {
-        backgroundColor: colors.header,
+        backgroundColor: colors.primary, // MISE À JOUR
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 12,
     },
     secondaryBadge: {
-        backgroundColor: colors.textSecondary,
+        backgroundColor: colors.accent, // MISE À JOUR
     },
     cardBadgeText: {
         color: colors.white,
@@ -372,41 +312,18 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         marginBottom: 20,
     },
-    cardFeatures: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginBottom: 24,
-    },
-    featureItem: {
-        alignItems: 'center',
-        flex: 1,
-    },
-    featureIcon: {
-        fontSize: 20,
-        marginBottom: 4,
-    },
-    featureText: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        textAlign: 'center',
-    },
     cardButton: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 16,
-        borderRadius: 16,
-        elevation: 2,
-        shadowColor: colors.cardShadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        borderRadius: 12,
     },
     primaryButton: {
-        backgroundColor: colors.header,
+        backgroundColor: colors.primary, // MISE À JOUR
     },
     secondaryButton: {
-        backgroundColor: colors.textSecondary,
+        backgroundColor: colors.accent, // MISE À JOUR
     },
     cardButtonText: {
         color: colors.white,
@@ -419,46 +336,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    servicesCard: {
-        backgroundColor: colors.white,
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: colors.border,
-        elevation: 2,
-        shadowColor: colors.cardShadow,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-    },
-    servicesTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: colors.textPrimary,
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    servicesList: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-    },
-    serviceItem: {
-        alignItems: 'center',
-        flex: 1,
-        paddingVertical: 12,
-    },
-    serviceIcon: {
-        fontSize: 24,
-        marginBottom: 8,
-    },
-    serviceText: {
-        fontSize: 12,
-        color: colors.textSecondary,
-        textAlign: 'center',
-    },
     footer: {
-        backgroundColor: colors.footer,
+        backgroundColor: colors.primary, // MISE À JOUR
         paddingVertical: 20,
         paddingHorizontal: 20,
     },

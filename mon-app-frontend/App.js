@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import HomeScreen from './src/screens/HomeScreen';
 import ComplaintFormScreen from './src/screens/ComplaintFormScreen';
-import TrackComplaintScreen from './src/screens/TrackComplaintScreen'; // 1. Importer le nouvel écran
+import TrackComplaintScreen from './src/screens/TrackComplaintScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -14,10 +14,17 @@ export default function App() {
         <NavigationContainer>
             <Stack.Navigator
                 screenOptions={{
-                    headerStyle: { backgroundColor: '#1e3a8a' },
-                    headerTintColor: '#ffffff',
-                    headerTitleStyle: { fontWeight: 'bold' },
-                    headerTitleAlign: 'center', // Centre le titre pour un look plus moderne
+                    headerStyle: {
+                        // ====================================================================
+                        // MISE À JOUR DE LA COULEUR DU HEADER
+                        // ====================================================================
+                        backgroundColor: '#3A4F53', // Vert ardoise foncé
+                    },
+                    headerTintColor: '#FFFFFF',
+                    headerTitleStyle: {
+                        fontWeight: 'bold',
+                    },
+                    headerTitleAlign: 'center',
                 }}
             >
                 <Stack.Screen
@@ -30,7 +37,6 @@ export default function App() {
                     component={ComplaintFormScreen}
                     options={{ title: 'وضع شكاية جديدة' }}
                 />
-                {/* 2. Ajouter le nouvel écran à la pile de navigation */}
                 <Stack.Screen
                     name="TrackComplaint"
                     component={TrackComplaintScreen}

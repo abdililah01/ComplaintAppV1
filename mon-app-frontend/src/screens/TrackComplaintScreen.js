@@ -11,16 +11,21 @@ import {
     Alert,
 } from 'react-native';
 
-// Utilisation de la même palette de couleurs pour la cohérence
+// ====================================================================
+// NOUVELLE PALETTE DE COULEURS - VERT ARDOISE & OR MOUTARDE
+// ====================================================================
 const colors = {
     background: '#f8fafc',
-    textPrimary: '#1e293b',
-    textSecondary: '#64748b',
-    header: '#1e3a8a',
-    white: '#ffffff',
+    white: '#FFFFFF',
+    accent: '#CCA43B',      // Or moutarde sobre
+    primary: '#3A4F53',     // Vert ardoise foncé
+
+    // Neutres
+    textPrimary: '#1a202c',
+    textSecondary: '#718096',
     border: '#e2e8f0',
     inputBackground: '#ffffff',
-    cardShadow: '#64748b',
+    cardShadow: '#a0aec0',
 };
 
 // Composant réutilisable pour les champs de saisie de cet écran
@@ -36,10 +41,7 @@ const FormInput = ({ label, ...props }) => (
 );
 
 const TrackComplaintScreen = () => {
-    // État pour savoir quelle option de recherche est sélectionnée
-    const [searchOption, setSearchOption] = useState('A'); // 'A' or 'B'
-
-    // États pour les champs de chaque option
+    const [searchOption, setSearchOption] = useState('A');
     const [optionAData, setOptionAData] = useState({ trackingCode: '', mobileNumber: '' });
     const [optionBData, setOptionBData] = useState({ trackingCode: '', complaintNumber: '', year: '' });
 
@@ -73,7 +75,6 @@ const TrackComplaintScreen = () => {
                         اختر طريقة البحث وأدخل المعلومات المطلوبة لعرض حالة شكايتك.
                     </Text>
 
-                    {/* Sélecteur d'options de recherche */}
                     <View style={styles.typeSelectorContainer}>
                         <TouchableOpacity
                             style={[styles.typeButton, searchOption === 'A' && styles.activeTypeButton]}
@@ -93,7 +94,6 @@ const TrackComplaintScreen = () => {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Affichage conditionnel des formulaires */}
                     {searchOption === 'A' ? (
                         <View style={styles.formContainer}>
                             <FormInput
@@ -145,6 +145,9 @@ const TrackComplaintScreen = () => {
     );
 };
 
+// ====================================================================
+// STYLES AVEC LA NOUVELLE PALETTE
+// ====================================================================
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -172,7 +175,7 @@ const styles = StyleSheet.create({
         width: 70,
         height: 70,
         borderRadius: 35,
-        backgroundColor: '#f1f5f9',
+        backgroundColor: 'rgba(58, 79, 83, 0.05)', // Couleur primaire très claire
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
@@ -197,7 +200,7 @@ const styles = StyleSheet.create({
     typeSelectorContainer: {
         flexDirection: 'row',
         borderWidth: 1,
-        borderColor: colors.header,
+        borderColor: colors.primary, // MISE À JOUR
         borderRadius: 10,
         overflow: 'hidden',
         marginBottom: 24,
@@ -210,10 +213,10 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
     },
     activeTypeButton: {
-        backgroundColor: colors.header,
+        backgroundColor: colors.primary, // MISE À JOUR
     },
     typeButtonText: {
-        color: colors.header,
+        color: colors.primary, // MISE À JOUR
         fontSize: 16,
         fontWeight: '600',
     },
@@ -246,7 +249,7 @@ const styles = StyleSheet.create({
         color: colors.textPrimary,
     },
     button: {
-        backgroundColor: colors.header,
+        backgroundColor: colors.accent, // MISE À JOUR
         width: '100%',
         paddingVertical: 16,
         borderRadius: 10,
@@ -254,7 +257,7 @@ const styles = StyleSheet.create({
         marginTop: 16,
     },
     buttonText: {
-        color: colors.white,
+        color: colors.primary, // MISE À JOUR
         fontSize: 16,
         fontWeight: '700',
     },
