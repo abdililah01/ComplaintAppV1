@@ -1,71 +1,89 @@
 // App.js
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import * as SplashScreen from 'expo-splash-screen';
 
-// Importation des écrans de l'application
+// Écrans de l'app
 import HomeScreen from './src/screens/HomeScreen';
 import ComplaintFormScreen from './src/screens/ComplaintFormScreen';
 import TrackComplaintScreen from './src/screens/TrackComplaintScreen';
 
-// Cette ligne est cruciale : elle empêche le splash screen natif de disparaître automatiquement.
+// Splash animé
+import AnimatedSplash from './src/screens/AnimatedSplash';
+
+// Ne pas auto‐cacher le splash natif
 SplashScreen.preventAutoHideAsync();
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+    const [appIsReady, setAppIsReady] = useState(false);
+    const [animDone, setAnimDone] = useState(false);
 
-    // Ce "hook" gère le moment où le splash screen doit être masqué.
+    // Pré‐chargement (fonts, data, etc.)
     useEffect(() => {
-        const prepareApp = async () => {
+        (async () => {
             try {
-                // Ici, on pourrait charger des polices, des données initiales, vérifier une connexion, etc.
-                // Pour l'instant, nous simulons simplement un petit temps de chargement pour un effet fluide.
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Attend 2 secondes
+                // Simule un chargement
+                await new Promise(res => setTimeout(res, 2000));
             } catch (e) {
                 console.warn(e);
             } finally {
-                // Une fois que l'application est prête, on masque le splash screen.
-                await SplashScreen.hideAsync();
+                setAppIsReady(true);
             }
-        };
-
-        prepareApp();
+        })();
     }, []);
 
+    // Une fois prêt, on cache le splash natif
+    const onLayoutRootView = useCallback(async () => {
+        if (appIsReady) {
+            await SplashScreen.hideAsync();
+        }
+    }, [appIsReady]);
+
+    if (!appIsReady) {
+        return null; // reste sur splash natif
+    }
+
+    if (!animDone) {
+        return <AnimatedSplash onEnd={() => setAnimDone(true)} />;
+    }
+
     return (
-        <NavigationContainer>
-            <Stack.Navigator
-                // L'écran initial est maintenant "Home". Le splash est géré au-dessus.
-                initialRouteName="Home"
-                screenOptions={{
-                    headerStyle: {
-                        backgroundColor: '#3A4F53', // Vert ardoise foncé
-                    },
-                    headerTintColor: '#FFFFFF',
-                    headerTitleStyle: {
-                        fontWeight: 'bold',
-                    },
-                    headerTitleAlign: 'center',
-                }}
-            >
-                <Stack.Screen
-                    name="Home"
-                    component={HomeScreen}
-                    options={{ headerShown: false }} // Le header est caché sur l'écran d'accueil
-                />
-                <Stack.Screen
-                    name="ComplaintForm"
-                    component={ComplaintFormScreen}
-                    options={{ title: 'وضع شكاية جديدة' }}
-                />
-                <Stack.Screen
-                    name="TrackComplaint"
-                    component={TrackComplaintScreen}
-                    options={{ title: 'تتبع شكاية موجودة' }}
-                />
-            </Stack.Navigator>
-        </NavigationContainer>
+        <View style={styles.container} onLayout={onLayoutRootView}>
+            <NavigationContainer>
+                <Stack.Navigator
+                    initialRouteName="Home"
+                    screenOptions={{
+                        headerStyle: { backgroundColor: '#3A4F53' },
+                        headerTintColor: '#fff',
+                        headerTitleStyle: { fontWeight: 'bold' },
+                        headerTitleAlign: 'center'
+                    }}
+                >
+                    <Stack.Screen
+                        name="Home"
+                        component={HomeScreen}
+                        options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                        name="ComplaintForm"
+                        component={ComplaintFormScreen}
+                        options={{ title: 'وضع شكاية جديدة' }}
+                    />
+                    <Stack.Screen
+                        name="TrackComplaint"
+                        component={TrackComplaintScreen}
+                        options={{ title: 'تتبع شكاية موجودة' }}
+                    />
+                </Stack.Navigator>
+            </NavigationContainer>
+        </View>
     );
 }
+
+const styles = StyleSheet.create({
+    container: { flex: 1 }
+});

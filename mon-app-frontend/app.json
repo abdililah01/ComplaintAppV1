@@ -12,15 +12,25 @@
         "expo-splash-screen",
         {
           "image": "./assets/new-splash.png",
-          "resizeMode": "contain",
-          "backgroundColor": "#3A4F53"
+          "resizeMode": "cover",
+          "backgroundColor": "#FFFFFF",
+          "enableFullScreenImage_legacy": true,
+          "imageWidth": 300,
+          "imageHeight": 300,
+          "dark": {
+            "image": "./assets/new-splash.png",
+            "backgroundColor": "#FFFFFF",
+            "resizeMode": "cover",
+            "enableFullScreenImage_legacy": true,
+            "imageWidth": 300,
+            "imageHeight": 300
+          }
         }
       ]
     ],
 
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.egawilldoit.monappfrontend"
