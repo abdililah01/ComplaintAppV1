@@ -19,55 +19,55 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Install Node.js
+      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      # 3. Install your JS dependencies
+      # 3. Install JS dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 4. Kill any leftover Gradle daemons (clean build)
+      # 4. Kill any leftover Gradle daemons for a clean build
       - name: Kill Gradle daemons
         run: |
           cd android
           ./gradlew --stop
           cd ..
 
-      # 5. Wipe out the Gradle cache for a truly fresh build
+      # 5. Clear the Gradle cache
       - name: Clear Gradle cache
         run: rm -rf ~/.gradle/caches
 
-      # 6. Generate/update the native Android project via Expo
+      # 6. Generate native Android project via Expo prebuild
       - name: Expo prebuild (android, clean)
         run: npx expo prebuild --platform android --clean
 
-      # 7. Install Java (JDK 17—fully compatible with your Gradle plugin)
+      # 7. Setup Java (JDK 17)
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 8. Install the Android SDK exactly matching your compileSdk/buildTools/NDK
+      # 8. Install Android SDK with exact SDK/NDK versions
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
         with:
-          api-level: 35             # compileSdkVersion from your logs
+          api-level: 35             # compileSdkVersion
           build-tools: '35.0.0'     # buildToolsVersion
           ndk: '27.1.12297006'      # ndkVersion
           cmake: false
 
-      # 9. Run Gradle to assemble a debug APK
+      # 9. Assemble the debug APK
       - name: Assemble Debug APK
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon
           cd ..
 
-      # 10. Publish the resulting APK as an artifact
+      # 10. Upload the APK as build artifact
       - name: Upload Debug APK
         uses: actions/upload-artifact@v3
         with:
