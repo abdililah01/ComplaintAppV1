@@ -1,4 +1,4 @@
-name: Android CI (Local Build)
+name: Android CI (Release Build)
 
 on:
   push:
@@ -59,14 +59,14 @@ jobs:
           ndk: '27.1.12297006'      # ndkVersion
           cmake: false
 
-      # 9. Assemble the debug APK
-      - name: Assemble Debug APK
+      # 9. Assemble the release APK
+      - name: Assemble Release APK
         working-directory: mon-app-frontend/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
-      # 10. Upload the APK as build artifact
-      - name: Upload Debug APK
+      # 10. Upload the release APK as build artifact
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-debug-apk
-          path: mon-app-frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          name: android-release-apk
+          path: mon-app-frontend/android/app/build/outputs/apk/release/app-release.apk
