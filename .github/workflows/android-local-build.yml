@@ -1,6 +1,5 @@
 name: Android CI (Local Build)
 
-# Trigger on pushes to develop or any feature branch, and on PRs targeting develop
 on:
   push:
     branches:
@@ -15,61 +14,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Check out your code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      # 3. Install JS dependencies
       - name: Install dependencies
         run: npm ci
 
-      # 4. Kill any leftover Gradle daemons for a clean build
       - name: Kill Gradle daemons
         run: |
           cd android
           ./gradlew --stop
           cd ..
 
-      # 5. Clear the Gradle cache
       - name: Clear Gradle cache
         run: rm -rf ~/.gradle/caches
 
-      # 6. Generate native Android project via Expo prebuild
       - name: Expo prebuild (android, clean)
         run: npx expo prebuild --platform android --clean
 
-      # 7. Setup Java (JDK 17)
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 8. Install Android SDK with exact SDK/NDK versions
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
         with:
-          api-level: 35             # compileSdkVersion
-          build-tools: '35.0.0'     # buildToolsVersion
-          ndk: '27.1.12297006'      # ndkVersion
+          api-level: 35
+          build-tools: '35.0.0'
+          ndk: '27.1.12297006'
           cmake: false
 
-      # 9. Assemble the debug APK
       - name: Assemble Debug APK
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon
           cd ..
 
-      # 10. Upload the APK as build artifact
       - name: Upload Debug APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4       # ← updated to v4
         with:
           name: android-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
