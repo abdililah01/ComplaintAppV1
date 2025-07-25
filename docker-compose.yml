@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  # Service de base de données SQL Server
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver-dev
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_PID=Developer
+      # Assurez-vous que ce mot de passe est sécurisé dans un vrai projet
+      - SA_PASSWORD=StrongP@ssw0rd
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql_data:/var/opt/mssql
+    healthcheck:
+      # Commande pour vérifier que SQL Server est prêt à accepter des connexions
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'StrongP@ssw0rd' -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      retries: 10
+      start_period: 10s
+      timeout: 5s
+
+  # Service d'analyse antivirus ClamAV
+  clamav:
+    image: clamav/clamav:1.3
+    container_name: clamav-dev
+    restart: unless-stopped
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamdb:/var/lib/clamav
+
+  # Service de notre API Backend
+  api:
+    # 'build: ./app-backend' dit à Docker de chercher le Dockerfile dans le dossier app-backend
+    build: ./app-backend
+    container_name: complaint-api-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Monte le code source du backend dans le conteneur pour le hot-reloading
+      - ./app-backend:/app
+      # Volume anonyme pour éviter que les node_modules locaux n'écrasent ceux du conteneur
+      - /app/node_modules
+    # Le fichier .env doit être dans le dossier app-backend
+    env_file:
+      - ./app-backend/.env
+    command: npm run dev
+    depends_on:
+      db:
+        # L'API ne démarrera que lorsque la base de données sera "healthy"
+        condition: service_healthy
+      clamav:
+        # L'API attendra que ClamAV ait démarré
+        condition: service_started
+
+# Déclaration des volumes nommés pour la persistance des données
+volumes:
+  mssql_data:
+  clamdb:
