@@ -1,6 +1,5 @@
-name: Android CI (Local Build)
+name: Android CI (Release Build)
 
-# Trigger on pushes to develop or any feature branch, and on PRs targeting develop
 on:
   push:
     branches:
@@ -25,16 +24,15 @@ jobs:
         with:
           node-version: '18'
 
-      # 3. Install JS dependencies
-      - name: Install dependencies
+      # 3. Install JS dependencies in the frontend folder
+      - name: Install frontend dependencies
+        working-directory: mon-app-frontend
         run: npm ci
 
-      # 4. Kill any leftover Gradle daemons for a clean build
+      # 4. Kill any leftover Gradle daemons (clean build)
       - name: Kill Gradle daemons
-        run: |
-          cd android
-          ./gradlew --stop
-          cd ..
+        working-directory: mon-app-frontend/android
+        run: ./gradlew --stop
 
       # 5. Clear the Gradle cache
       - name: Clear Gradle cache
@@ -42,6 +40,7 @@ jobs:
 
       # 6. Generate native Android project via Expo prebuild
       - name: Expo prebuild (android, clean)
+        working-directory: mon-app-frontend
         run: npx expo prebuild --platform android --clean
 
       # 7. Setup Java (JDK 17)
@@ -60,16 +59,14 @@ jobs:
           ndk: '27.1.12297006'      # ndkVersion
           cmake: false
 
-      # 9. Assemble the debug APK
-      - name: Assemble Debug APK
-        run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon
-          cd ..
+      # 9. Assemble the release APK
+      - name: Assemble Release APK
+        working-directory: mon-app-frontend/android
+        run: ./gradlew assembleRelease --no-daemon
 
-      # 10. Upload the APK as build artifact
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v3
+      # 10. Upload the release APK as build artifact
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
         with:
-          name: android-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: android-release-apk
+          path: mon-app-frontend/android/app/build/outputs/apk/release/app-release.apk
