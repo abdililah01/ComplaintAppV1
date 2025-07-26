@@ -28,23 +28,40 @@ services:
     volumes:
       - clamdb:/var/lib/clamav
 
-  # Service de notre API Backend
-  api:
+  # Service pour l'API de Lookup (lecture seule)
+  lookup-api:
     build: ./app-backend
-    container_name: complaint-api-dev
+    container_name: lookup-api-dev
+    command: npm run dev:lookup
+    env_file:
+      - ./.env # Chemin mis à jour vers la racine
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
-      - "3001:3000"
+      - "3001:3001"
     volumes:
       - ./app-backend:/app
       - /app/node_modules
+
+  # Service pour l'API Transactionnelle (écriture)
+  trx-api:
+    build: ./app-backend
+    container_name: trx-api-dev
+    command: npm run dev:trx
     env_file:
-      - ./app-backend/.env
-    command: npm run dev
+      - ./.env # Chemin mis à jour vers la racine
     depends_on:
       db:
         condition: service_healthy
       clamav:
         condition: service_started
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./app-backend:/app
+      - /app/node_modules
+      - ./app-backend/uploads:/app/uploads
 
 volumes:
   mssql_data:
