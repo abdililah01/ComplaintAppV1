@@ -1,0 +1,73 @@
+# ===================================================================
+# Fichiers Globaux et Spécifiques à l'Éditeur/OS
+# ===================================================================
+# Fichiers de configuration des éditeurs
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Fichiers générés par le système d'exploitation
+.DS_Store
+Thumbs.db
+
+# ===================================================================
+# Fichiers Sensibles (Secrets)
+# ===================================================================
+# Fichiers d'environnement - NE JAMAIS LES COMMITTER
+.env
+.env.*.local
+.env.local
+# Couvre également le .env du backend
+app-backend/.env
+
+# ===================================================================
+# Dépendances Node.js (communes au frontend et au backend)
+# ===================================================================
+# Le dossier contenant tous les paquets installés
+node_modules/
+
+# Fichiers de log NPM
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===================================================================
+# Fichiers Spécifiques au Backend (app-backend)
+# ===================================================================
+# Code JavaScript compilé (généré par 'npm run build')
+app-backend/dist/
+
+# Dossier pour les fichiers uploadés localement
+app-backend/uploads/
+
+# Fichiers de log de l'application
+app-backend/*.log
+app-backend/logs/
+
+# Rapports de couverture de test générés par Jest
+app-backend/coverage/
+
+# Fichiers de base de données SQLite générés par Prisma (si vous l'utilisez en dev)
+app-backend/prisma/*.db*
+
+# ===================================================================
+# Fichiers Spécifiques au Frontend (mon-app-frontend avec Expo)
+# ===================================================================
+mon-app-frontend/.expo/
+mon-app-frontend/node_modules/
+mon-app-frontend/dist/
+mon-app-frontend/web-build/
+
+# Fichiers de configuration Expo spécifiques à l'utilisateur
+mon-app-frontend/eas.json
+
+# Logs de crash Metro Bundler
+mon-app-frontend/metro-bundler-cache-*
+mon-app-frontend/app.config.ts
+mon-app-frontend/app.config.js
+mon-app-frontend/app.json
