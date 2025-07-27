@@ -1,12 +1,11 @@
 services:
-  # Service de base de données SQL Server
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: sqlserver-dev
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_PID=Developer
-      - SA_PASSWORD=@Ega1234
+      - SA_PASSWORD=${DB_SA_PASSWORD}
     ports:
       - "1433:1433"
     volumes:
@@ -18,7 +17,6 @@ services:
       start_period: 60s
       timeout: 15s
 
-  # Service d'analyse antivirus ClamAV
   clamav:
     image: clamav/clamav:1.3
     container_name: clamav-dev
@@ -28,13 +26,14 @@ services:
     volumes:
       - clamdb:/var/lib/clamav
 
-  # Service pour l'API de Lookup (lecture seule)
   lookup-api:
     build: ./app-backend
     container_name: lookup-api-dev
     command: npm run dev:lookup
-    env_file:
-      - ./.env # Chemin mis à jour vers la racine
+    environment:
+      - DATABASE_URL=sqlserver://db:1433;database=ComplaintDev;user=${DB_LOOKUP_USER};password=${DB_LOOKUP_PASSWORD};trustServerCertificate=true;encrypt=false
+      - PORT=${LOOKUP_API_PORT}
+      - NODE_ENV=development
     depends_on:
       db:
         condition: service_healthy
@@ -44,13 +43,16 @@ services:
       - ./app-backend:/app
       - /app/node_modules
 
-  # Service pour l'API Transactionnelle (écriture)
   trx-api:
     build: ./app-backend
     container_name: trx-api-dev
     command: npm run dev:trx
-    env_file:
-      - ./.env # Chemin mis à jour vers la racine
+    environment:
+      - DATABASE_URL=sqlserver://db:1433;database=ComplaintDev;user=${DB_SERVICE_USER};password=${DB_SERVICE_PASSWORD};trustServerCertificate=true;encrypt=false
+      - CLAMAV_HOST=${CLAMAV_HOST}
+      - CLAMAV_PORT=${CLAMAV_PORT}
+      - PORT=${TRX_API_PORT}
+      - NODE_ENV=development
     depends_on:
       db:
         condition: service_healthy
@@ -64,5 +66,5 @@ services:
       - ./app-backend/uploads:/app/uploads
 
 volumes:
-  mssql_data:
-  clamdb:
+  mssql_data: {}
+  clamdb: {}
