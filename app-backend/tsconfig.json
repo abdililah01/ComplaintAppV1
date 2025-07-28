@@ -1,3 +1,4 @@
+
 {
   "compilerOptions": {
     /* Base Options: */
@@ -10,7 +11,7 @@
     /* Strict Type-Checking Options: */
     "strict": true, /* Active toutes les règles de vérification de type strictes. C'est la raison principale de l'utilisation de TypeScript. */
 
-    /* Module Resolution Options: */
+    /* Module Resolution  */
     "module": "commonjs", /* Spécifie que le code JavaScript généré doit utiliser le système de modules CommonJS (celui utilisé par Node.js). */
     "resolveJsonModule": true, /* Permet d'importer des fichiers .json directement dans le code. */
 

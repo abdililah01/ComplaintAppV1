@@ -1,6 +1,6 @@
-// Fichier: /app-backend/src/lookup/app.ts
+// Fichier: /app-backend/src/lookup/app.ts (FINAL & LINT-PERFECT)
 
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -22,27 +22,31 @@ app.use(express.urlencoded({ extended: true }));
 const limiter = rateLimit({ windowMs: 60_000, max: 300 });
 app.use(limiter);
 
-app.use((req, _res, next) => {
-  (req as any).id = (req as any).id || randomUUID();
-  logger.info({ id: (req as any).id, method: req.method, url: req.url }, 'Incoming request');
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  req.id = randomUUID();
+  logger.info({ id: req.id, method: req.method, url: req.url }, 'Incoming request');
   next();
 });
 
 // Healthcheck
-app.get('/healthz', (_req, res) => res.json({ status: 'ok' }));
+app.get('/healthz', (_req: Request, res: Response) => res.json({ status: 'ok' }));
 
 // Routes
 app.use('/lookups', lookupRoutes);
 
 // 404 Handler
-app.use((req, res) => {
+app.use((req: Request, res: Response) => {
   res.status(404).json({ error: 'Not found', path: req.path });
 });
 
 // Error Handler
-app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error({ id: (req as any).id, error: err?.message, stack: err?.stack }, 'Unhandled error');
-  res.status(err?.status || 500).json({ error: err?.message || 'Internal error' });
+app.use((err: Error, req: Request, res: Response) => {
+  logger.error({ id: req.id, error: err?.message, stack: err?.stack }, 'Unhandled error');
+
+  // Safe way to check for status property on error object
+  const statusCode = 'status' in err && typeof err.status === 'number' ? err.status : 500;
+
+  res.status(statusCode).json({ error: err?.message || 'Internal error' });
 });
 
-export default app; // Exporte l'instance d'Express pour les tests
+export default app;

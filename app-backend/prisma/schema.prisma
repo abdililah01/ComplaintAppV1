@@ -1,4 +1,4 @@
-// Fichier: /app-backend/prisma/schema.prisma
+// Fichier: /app-backend/prisma/schema.prisma (FINAL v3 - Syntaxe d'index corrigée)
 
 datasource db {
   provider = "sqlserver"
@@ -9,15 +9,16 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Pays {
-  Id          Int                @id @map("Id")
-  Nom         String             @db.NVarChar(100)
-  Code        String             @db.NVarChar(5)
-  Nom_Fr      String?            @db.NVarChar(100)
-  Nationalite String?            @db.NVarChar(60)
-  Ville       Ville[]
-  Personne    PersonnePhysique[]
+// --- TABLES DE RÉFÉRENCE ---
 
+model Pays {
+  Id               Int                @id @map("Id")
+  Nom              String             @db.NVarChar(400)
+  Code             String?            @db.NVarChar(40)
+  Nom_Fr           String?            @db.NVarChar(400)
+  Nationalite      String?            @db.NVarChar(60)
+  Ville            Ville[]
+  PersonnePhysique PersonnePhysique[]
   @@map("Pays")
 }
 
@@ -25,11 +26,10 @@ model Ville {
   Id               Int                @id @map("Id")
   Nom              String             @db.NVarChar(120)
   IdPays           Int
-  CodePostal       String?            @db.NVarChar(10)
+  CodePostal       String?            @db.NVarChar(20)
   Nom_Fr           String?            @db.NVarChar(120)
   pays             Pays               @relation(fields: [IdPays], references: [Id], onDelete: NoAction, onUpdate: NoAction)
   PersonnePhysique PersonnePhysique[]
-
   @@index([IdPays])
   @@map("Ville")
 }
@@ -38,7 +38,6 @@ model SituationResidence {
   Id               Int                @id @map("Id")
   Libelle          String             @db.NVarChar(60)
   PersonnePhysique PersonnePhysique[]
-
   @@map("SituationResidence")
 }
 
@@ -46,17 +45,15 @@ model Profession {
   Id               Int                @id @map("Id")
   Libelle          String             @db.NVarChar(120)
   PersonnePhysique PersonnePhysique[]
-
   @@map("Profession")
 }
 
 model Juridiction {
   Id             Int              @id @map("Id")
-  Nom            String           @db.NVarChar(255)
-  Affichable     Boolean?
+  Nom            String           @db.NVarChar(200)
+  Affichable     Boolean          @db.Bit
   PersonneMorale PersonneMorale[]
   Plainte        Plainte[]
-
   @@map("Juridiction")
 }
 
@@ -64,135 +61,124 @@ model ObjetInjustice {
   IdObjetInjustice Int      @id @map("IdObjetInjustice")
   Libelle          String   @db.NVarChar(120)
   Plainte          Plainte[]
-
   @@map("ObjetInjustice")
-}
-
-model PersonnePhysique {
-  IdPersonnePhysique   Int                 @id @map("IdPersonnePhysique")
-  Nom                  String              @db.NVarChar(100)
-  Prenom               String              @db.NVarChar(100)
-  CIN                  String              @db.NVarChar(50)
-  DateNaissance        DateTime?
-  Sexe                 String?             @db.Char(1)
-  IdSituationResidence Int
-  IdProfession         Int?
-  IdPays               Int
-  IdVille              Int
-  AdressePrimaire      String              @db.NVarChar(255)
-  IsCultive            Boolean?
-  SessionId            String?             @db.NVarChar(510)
-  pays                 Pays                @relation(fields: [IdPays], references: [Id], onDelete: NoAction, onUpdate: NoAction)
-  ville                Ville               @relation(fields: [IdVille], references: [Id], onDelete: NoAction, onUpdate: NoAction)
-  situationResidence   SituationResidence  @relation(fields: [IdSituationResidence], references: [Id], onDelete: NoAction, onUpdate: NoAction)
-  profession           Profession?         @relation(fields: [IdProfession], references: [Id], onDelete: NoAction, onUpdate: NoAction)
-  Partie               Partie[]
-
-  @@index([IdPays])
-  @@index([IdVille])
-  @@map("PersonnePhysique")
-}
-
-model PersonneMorale {
-  IdPersonneMorale        Int           @id @map("IdPersonneMorale")
-  NomCommercial           String        @db.NVarChar(200)
-  NumeroRC                String        @db.NVarChar(50)
-  IdJuridiction           Int?
-  NomRepresentantLegal    String?       @db.NVarChar(120)
-  PrenomRepresentantLegal String?       @db.NVarChar(120)
-  EnseigneSociale         String?       @db.NVarChar(200)
-  SessionId               String?       @db.NVarChar(510)
-  juridiction             Juridiction?  @relation(fields: [IdJuridiction], references: [Id], onDelete: NoAction, onUpdate: NoAction)
-  Partie                  Partie[]
-
-  @@index([IdJuridiction])
-  @@map("PersonneMorale")
-}
-
-model Partie {
-  IdPartie           Int                 @id @map("IdPartie")
-  TypePersonne       String              @db.NVarChar(15)
-  Telephone          String?             @db.NVarChar(50)
-  Email              String?             @db.NVarChar(120)
-  IdPersonnePhysique Int?
-  IdPersonneMorale   Int?
-  IsInconnu          Boolean?
-  SessionId          String?             @db.NVarChar(510)
-  personnePhysique   PersonnePhysique?   @relation(fields: [IdPersonnePhysique], references: [IdPersonnePhysique], onDelete: NoAction, onUpdate: NoAction)
-  personneMorale     PersonneMorale?     @relation(fields: [IdPersonneMorale], references: [IdPersonneMorale], onDelete: NoAction, onUpdate: NoAction)
-  roles              RolePartiePlainte[]
-
-  @@map("Partie")
-}
-
-model Plainte {
-  IdPlainte        Int                 @id @map("IdPlainte")
-  DatePlainte      DateTime            @db.DateTime
-  IdObjetInjustice Int
-  IdJuridiction    Int
-  CodeSuivi        String              @unique @db.Char(12)
-  ResumePlainte    String
-  NumeroPlainte    Int?
-  AnneePlainte     Int?
-  SessionId        String?             @db.NVarChar(510)
-  objetInjustice   ObjetInjustice      @relation(fields: [IdObjetInjustice], references: [IdObjetInjustice], onDelete: NoAction, onUpdate: NoAction)
-  juridiction      Juridiction         @relation(fields: [IdJuridiction], references: [Id], onDelete: NoAction, onUpdate: NoAction)
-  pieces           PieceJointe[]
-  codesSms         CodeSMS[] // Ce champ nécessite la relation de retour dans CodeSMS
-  roles            RolePartiePlainte[]
-
-  @@index([IdObjetInjustice])
-  @@index([IdJuridiction])
-  @@map("Plainte")
 }
 
 model RolePlainte {
   IdRolePlainte Int                 @id @map("IdRolePlainte")
   Libelle       String              @db.NVarChar(60)
   roles         RolePartiePlainte[]
-
   @@map("RolePlainte")
 }
 
-model RolePartiePlainte {
-  IdRolePartiePlainte Int         @id @map("IdRolePartiePlainte")
-  IdPartie            Int
-  IdPlainte           Int
-  IdRolePlainte       Int
-  partie              Partie      @relation(fields: [IdPartie], references: [IdPartie], onDelete: NoAction, onUpdate: NoAction)
-  plainte             Plainte     @relation(fields: [IdPlainte], references: [IdPlainte], onDelete: Cascade)
-  role                RolePlainte @relation(fields: [IdRolePlainte], references: [IdRolePlainte], onDelete: NoAction, onUpdate: NoAction)
+// --- TABLES TRANSACTIONNELLES ---
 
+model PersonnePhysique {
+  Id                   BigInt               @id @map("Id")
+  Nom                  String               @db.NVarChar(600)
+  Prenom               String               @db.NVarChar(600)
+  Sexe                 String               @db.Char(1)
+  IdSituationResidence Int
+  CIN                  String?              @db.NVarChar(100)
+  IdProfession         Int
+  IdPays               Int
+  IdVille              Int
+  IsCultive            Boolean              @db.Bit
+  SessionId            String?              @db.NVarChar(500)
+  AdressePrimaire      String?              @db.NVarChar(1998)
+  DateNaissance        DateTime?            @db.DateTime
+  pays                 Pays                 @relation(fields: [IdPays], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  ville                Ville                @relation(fields: [IdVille], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  situationResidence   SituationResidence   @relation(fields: [IdSituationResidence], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  profession           Profession           @relation(fields: [IdProfession], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  Partie               Partie[]
+  // CORRECTION: Syntaxe correcte pour plusieurs index
+  @@index([IdPays])
+  @@index([IdVille])
+  @@map("PersonnePhysique")
+}
+
+model PersonneMorale {
+  Id                      BigInt        @id @map("Id")
+  NomCommercial           String        @db.NVarChar(600)
+  NumeroRC                String?       @db.NVarChar(100)
+  IdJuridiction           Int?
+  NomRepresentantLegal    String?       @db.NVarChar(600)
+  PrenomRepresentantLegal String?       @db.NVarChar(600)
+  SessionId               String?       @db.NVarChar(500)
+  EnseigneSociale         String?       @db.NVarChar(1000)
+  juridiction             Juridiction?  @relation(fields: [IdJuridiction], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  Partie                  Partie[]
+  @@index([IdJuridiction])
+  @@map("PersonneMorale")
+}
+
+model Partie {
+  Id                 BigInt              @id @map("Id")
+  TypePersonne       String              @db.Char(1)
+  Telephone          String?             @db.VarChar(30)
+  Email              String?             @db.VarChar(200)
+  IdPersonnePhysique BigInt?
+  IdPersonneMorale   BigInt?
+  IsInconnu          Boolean             @db.Bit
+  SessionId          String?             @db.NVarChar(500)
+  personnePhysique   PersonnePhysique?   @relation(fields: [IdPersonnePhysique], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  personneMorale     PersonneMorale?     @relation(fields: [IdPersonneMorale], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  roles              RolePartiePlainte[]
+  @@map("Partie")
+}
+
+model Plainte {
+  Id               BigInt              @id @map("Id")
+  DatePlainte      DateTime            @db.DateTime
+  IdObjetInjustice Int
+  IdJuridiction    Int
+  CodeSuivi        String?             @db.NVarChar(100)
+  ResumePlainte    String?
+  objetInjustice   ObjetInjustice      @relation(fields: [IdObjetInjustice], references: [IdObjetInjustice], onDelete: NoAction, onUpdate: NoAction)
+  juridiction      Juridiction         @relation(fields: [IdJuridiction], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  pieces           PieceJointe[]
+  roles            RolePartiePlainte[]
+  CodeSMS          CodeSMS[]
+  @@index([IdObjetInjustice])
+  @@index([IdJuridiction])
+  @@map("plainte")
+}
+
+model RolePartiePlainte {
+  IdRolePartiePlainte BigInt      @id
+  IdPartie            BigInt
+  IdPlainte           BigInt
+  IdRolePlainte       Int
+  partie              Partie      @relation(fields: [IdPartie], references: [Id], onDelete: NoAction, onUpdate: NoAction)
+  plainte             Plainte     @relation(fields: [IdPlainte], references: [Id], onDelete: Cascade)
+  role                RolePlainte @relation(fields: [IdRolePlainte], references: [IdRolePlainte], onDelete: NoAction, onUpdate: NoAction)
   @@index([IdPlainte])
   @@map("RolePartiePlainte")
 }
 
 model PieceJointe {
-  IdPiece         Int     @id @map("IdPiece")
+  Id              BigInt  @id @map("Id")
   Contenu         Bytes?
-  IdPlainte       Int
-  ExtensionPJ     String? @db.NVarChar(12)
-  TypePieceJointe String? @db.NVarChar(60)
-  SessionId       String? @db.NVarChar(510)
-  plainte         Plainte @relation(fields: [IdPlainte], references: [IdPlainte], onDelete: Cascade)
-
+  IdPlainte       BigInt
+  SessionId       String? @db.VarChar(500)
+  extensionPJ     String? @db.NVarChar(100)
+  TypePieceJointe Int?
+  plainte         Plainte @relation(fields: [IdPlainte], references: [Id], onDelete: Cascade)
   @@index([IdPlainte])
   @@map("PieceJointe")
 }
 
 model CodeSMS {
   IdCode        Int       @id @map("IdCode")
-  // CORRECTION: Ajout du champ IdPlainte qui était manquant et qui est requis pour la relation
-  IdPlainte     Int
+  IdPlainte     BigInt
+  IdSession     String?   @db.NVarChar(510)
   NumeroTel     String?   @db.NVarChar(510)
   Tentative     Int?
-  DateEnvoiCode DateTime?
+  DateEnvoiCode DateTime? @db.DateTime
   Valide        String?   @db.NVarChar(510)
   Code          String?   @db.NVarChar(12)
-
-  // CORRECTION: Ajout de la relation de retour obligatoire vers Plainte
-  plainte       Plainte   @relation(fields: [IdPlainte], references: [IdPlainte], onDelete: Cascade)
-
+  plainte       Plainte   @relation(fields: [IdPlainte], references: [Id], onDelete: Cascade)
   @@index([IdPlainte])
   @@map("CodeSMS")
 }
