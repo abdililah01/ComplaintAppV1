@@ -1,20 +1,22 @@
-// Fichier: /app-backend/src/lookup/routes.ts
+// Fichier: /app-backend/src/lookup/routes.ts (Logique métier pour les villes ajoutée)
 
 import { Router, Request, Response } from 'express';
-import prisma from '../common/prisma'; // Notre client Prisma singleton
+import prisma from '../common/prisma';
 
 const router = Router();
 
-// Interface commune pour toutes les réponses de lookup
 interface LookupItem {
   id: number;
   label: string;
 }
 
 /**
- * Helper function pour parser la langue et le nom
+ * Helper function pour gérer la logique de langue et de formatage du nom.
  */
-const getLabel = (lang: string, nom: string, nomFr: string | null): string => {
+const getLabel = (lang: string, nom: string, nomFr: string | null | undefined): string => {
+  if (!nom.includes(' -- ')) {
+    return nomFr || nom;
+  }
   const [latinName, arabicName] = nom.split(' -- ');
   return lang === 'ar' ? (arabicName || latinName) : (nomFr || latinName);
 };
@@ -24,11 +26,8 @@ const getLabel = (lang: string, nom: string, nomFr: string | null): string => {
 // 1. GET /pays
 router.get('/pays', async (req: Request, res: Response) => {
   const lang = req.query.lang === 'ar' ? 'ar' : 'lat';
-  
   try {
-    const pays = await prisma.pays.findMany({
-      orderBy: { Nom: 'asc' },
-    });
+    const pays = await prisma.pays.findMany({ orderBy: { Nom: 'asc' } });
     const data: LookupItem[] = pays.map(p => ({
       id: p.Id,
       label: getLabel(lang, p.Nom, p.Nom_Fr),
@@ -39,7 +38,7 @@ router.get('/pays', async (req: Request, res: Response) => {
   }
 });
 
-// 2. GET /villes
+// 2. GET /villes (LOGIQUE MÉTIER MISE À JOUR)
 router.get('/villes', async (req: Request, res: Response) => {
   const lang = req.query.lang === 'ar' ? 'ar' : 'lat';
   const idPays = parseInt(req.query.idPays as string, 10);
@@ -49,6 +48,14 @@ router.get('/villes', async (req: Request, res: Response) => {
   }
 
   try {
+    // CORRECTION: Logique métier spécifique au Maroc (ID = 1)
+    if (idPays !== 1) {
+      // Pour tout pays autre que le Maroc, on renvoie une liste spéciale
+      const notAvailableLabel = getLabel(lang, 'UNKNOWN -- المدن غير متوفرة', 'Villes non disponibles');
+      return res.json([{ id: 0, label: notAvailableLabel }]);
+    }
+
+    // Si c'est le Maroc, on continue normalement
     const villes = await prisma.ville.findMany({
       where: { IdPays: idPays },
       orderBy: { Nom: 'asc' },
@@ -57,7 +64,7 @@ router.get('/villes', async (req: Request, res: Response) => {
       id: v.Id,
       label: getLabel(lang, v.Nom, v.Nom_Fr),
     }));
-    res.set('Cache-Control', 'public, max-age=3600').json(data); // Cache plus court car peut changer
+    res.set('Cache-Control', 'public, max-age=3600').json(data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve cities' });
   }
@@ -65,8 +72,6 @@ router.get('/villes', async (req: Request, res: Response) => {
 
 // 3. GET /juridictions
 router.get('/juridictions', async (req: Request, res: Response) => {
-  // Le champ 'Nom' pour Juridiction ne semble pas avoir de format bilingue.
-  // Nous retournons donc directement le nom.
   try {
     const juridictions = await prisma.juridiction.findMany({
       where: { Affichable: true },
@@ -129,6 +134,5 @@ router.get('/situations-residence', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to retrieve residence situations' });
   }
 });
-
 
 export default router;
