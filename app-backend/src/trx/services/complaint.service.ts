@@ -1,4 +1,5 @@
 import prisma from '../../common/prisma';
+import { Prisma } from '@prisma/client';          // FIX: pull in Prisma types
 
 export interface CreateComplaintParams {
     PlaignantTypePersonne: 'P' | 'M';
@@ -30,35 +31,37 @@ export interface CreateComplaintResult {
     TrackingCode: string;
 }
 
+/**
+ * Runs the SQL-Server stored procedure `dbo.sp_Mobile_CreatePlainte`
+ * using **fully-parameterised** SQL to avoid injection attacks.
+ */
 export async function createComplaintInDB(
-    p: CreateComplaintParams
+    p: CreateComplaintParams,
 ): Promise<CreateComplaintResult[]> {
-    // inline all parameters into one EXEC string
-    const sql = `
-EXEC dbo.sp_Mobile_CreatePlainte
-  @PlaignantTypePersonne='${p.PlaignantTypePersonne}',
-  @PlaignantNom='${p.PlaignantNom.replace(/'/g, "''")}',
-  @PlaignantPrenom='${(p.PlaignantPrenom || '').replace(/'/g, "''")}',
-  @PlaignantCIN='${(p.PlaignantCIN || '').replace(/'/g, "''")}',
-  @PlaignantIdPays=${p.PlaignantIdPays},
-  @PlaignantIdVille=${p.PlaignantIdVille},
-  @PlaignantIdSituationResidence=${p.PlaignantIdSituationResidence},
-  @PlaignantIdProfession=${p.PlaignantIdProfession},
-  @PlaignantSexe='${p.PlaignantSexe || ''}',
-  @PlaignantAdresse='${(p.PlaignantAdresse || '').replace(/'/g, "''")}',
-  @PlaignantTelephone='${(p.PlaignantTelephone || '').replace(/'/g, "''")}',
-  @PlaignantEmail='${(p.PlaignantEmail || '').replace(/'/g, "''")}',
-  @PlaignantNomCommercial='${(p.PlaignantNomCommercial || '').replace(/'/g, "''")}',
-  @PlaignantNumeroRC='${(p.PlaignantNumeroRC || '').replace(/'/g, "''")}',
-  @DefendeurTypePersonne='${p.DefendeurTypePersonne}',
-  @DefendeurNom='${(p.DefendeurNom || '').replace(/'/g, "''")}',
-  @DefendeurNomCommercial='${(p.DefendeurNomCommercial || '').replace(/'/g, "''")}',
-  @IdObjetInjustice=${p.IdObjetInjustice},
-  @IdJuridiction=${p.IdJuridiction},
-  @ResumePlainte='${p.ResumePlainte.replace(/'/g, "''")}',
-  @SessionId='${p.SessionId.replace(/'/g, "''")}'
-`;
-
-    // $queryRawUnsafe returns the SELECTed IdPlainte & TrackingCode
-    return prisma.$queryRawUnsafe<CreateComplaintResult[]>(sql);
+    // FIX: use the `$queryRaw` *tagged template* — Prisma
+    //      handles escaping & type-mapping automatically.
+    return prisma.$queryRaw<CreateComplaintResult[]>`
+    EXEC dbo.sp_Mobile_CreatePlainte
+      @PlaignantTypePersonne         = ${p.PlaignantTypePersonne},
+      @PlaignantNom                  = ${p.PlaignantNom},
+      @PlaignantPrenom               = ${p.PlaignantPrenom},
+      @PlaignantCIN                  = ${p.PlaignantCIN},
+      @PlaignantIdPays               = ${p.PlaignantIdPays},
+      @PlaignantIdVille              = ${p.PlaignantIdVille},
+      @PlaignantIdSituationResidence = ${p.PlaignantIdSituationResidence},
+      @PlaignantIdProfession         = ${p.PlaignantIdProfession},
+      @PlaignantSexe                 = ${p.PlaignantSexe},
+      @PlaignantAdresse              = ${p.PlaignantAdresse},
+      @PlaignantTelephone            = ${p.PlaignantTelephone},
+      @PlaignantEmail                = ${p.PlaignantEmail},
+      @PlaignantNomCommercial        = ${p.PlaignantNomCommercial},
+      @PlaignantNumeroRC             = ${p.PlaignantNumeroRC},
+      @DefendeurTypePersonne         = ${p.DefendeurTypePersonne},
+      @DefendeurNom                  = ${p.DefendeurNom},
+      @DefendeurNomCommercial        = ${p.DefendeurNomCommercial},
+      @IdObjetInjustice              = ${p.IdObjetInjustice},
+      @IdJuridiction                 = ${p.IdJuridiction},
+      @ResumePlainte                 = ${p.ResumePlainte},
+      @SessionId                     = ${p.SessionId}
+  `;
 }

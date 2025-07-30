@@ -1,33 +1,30 @@
-
+// files: app-backend/tsconfig.json
 {
   "compilerOptions": {
-    /* Base Options: */
-    "esModuleInterop": true, /* Permet la compatibilité entre les modules CommonJS (require) et ES (import). CRUCIAL pour Express. */
-    "skipLibCheck": true, /* Ignore la vérification des types dans les fichiers de déclaration (.d.ts), ce qui accélère la compilation. */
-    "target": "es2016", /* Cible la version de JavaScript émise. ES2016 est un standard stable et largement compatible. */
-    "forceConsistentCasingInFileNames": true, /* Impose que les noms de fichiers dans les imports aient la bonne casse. Prévient des bugs sur les systèmes sensibles à la casse comme Linux. */
-    "moduleDetection": "force", /* Assure que TypeScript traite chaque fichier comme un module, ce qui est le comportement attendu. */
-    "outDir": "dist",
+    /* Base Options */
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "es2016",
+    "forceConsistentCasingInFileNames": true,
+    "moduleDetection": "force",
+    "module": "commonjs",
+    "resolveJsonModule": true,
 
-    /* Strict Type-Checking Options: */
-    "strict": true, /* Active toutes les règles de vérification de type strictes. C'est la raison principale de l'utilisation de TypeScript. */
+    /* Strict Type-Checking */
+    "strict": true,
 
-    /* Module Resolution  */
-    "module": "commonjs", /* Spécifie que le code JavaScript généré doit utiliser le système de modules CommonJS (celui utilisé par Node.js). */
-    "resolveJsonModule": true, /* Permet d'importer des fichiers .json directement dans le code. */
-
-    /* Output Directory Options: */
-    "outDir": "./dist", /* Spécifie que le résultat de la compilation (npm run build) sera placé dans le dossier 'dist'. */
-    "rootDir": "./src" /* Spécifie que la racine de notre code source est le dossier 'src'. */
+    /* Source & Output */
+    // rootDir must be the common ancestor of src/, prisma/, tests/, etc.
+    "rootDir": ".",
+    "outDir": "./dist"
   },
   "include": [
     "src/**/*",
-    "tests/**/*",
-    "prisma/**/*.ts"
-
+    "prisma/**/*.ts",
+    "tests/**/*"
   ],
   "exclude": [
-    "node_modules", /* Indique à TypeScript d'ignorer le dossier node_modules. */
-    "dist" /* Indique à TypeScript d'ignorer le dossier de sortie pour éviter les boucles de compilation. */
+    "node_modules",
+    "dist"
   ]
 }
