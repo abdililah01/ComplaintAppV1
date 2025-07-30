@@ -1,29 +1,30 @@
-# Fichier: /app-backend/Dockerfile
-
-# Étape 1: Utiliser une image Node.js basée sur Debian (plus compatible avec Prisma)
+# 1. Base image
 FROM node:18-slim
 
-# Étape 2: Installer les dépendances système nécessaires pour Prisma
-RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+# 2. OS deps for Prisma
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
-# Étape 3: Définir le répertoire de travail dans le conteneur
+# 3. Workdir
 WORKDIR /app
 
-# Étape 4: Copier les fichiers de manifeste et le schéma Prisma
+# 4. Copy manifests first
 COPY package*.json ./
+COPY package-lock*.json ./
 COPY prisma ./prisma/
 
-# Étape 5: Installer TOUTES les dépendances (dev et prod)
+# 5. Install ALL dependencies (tsx included)
 RUN npm install
 
-# Étape 6: Générer le client Prisma
+# 6. Generate Prisma client
 RUN npx prisma generate
 
-# Étape 7: Copier le reste du code de l'application
+# 7. Copy source
 COPY . .
 
-# Étape 8: Exposer le port que l'application utilisera
+# 8. Expose port
 EXPOSE 3000
 
-# Étape 9: Commande par défaut
-CMD [ "npm", "run", "dev" ]
+# 9. Default CMD (overridden by docker-compose)
+CMD ["npm", "run", "dev"]

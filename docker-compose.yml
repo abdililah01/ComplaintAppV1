@@ -1,4 +1,9 @@
+version: "3.9"
+
 services:
+  # ──────────────────────────────
+  #  Microsoft SQL Server (Dev)
+  # ──────────────────────────────
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: sqlserver-dev
@@ -10,13 +15,16 @@ services:
       - "1433:1433"
     volumes:
       - mssql_data:/var/opt/mssql
-    healthcheck:
+    healthcheck:               # ← must exist for depends_on: condition: service_healthy
       test: ["CMD-SHELL", "timeout 10s bash -c '</dev/tcp/localhost/1433' || exit 1"]
       interval: 30s
       retries: 5
       start_period: 60s
       timeout: 15s
 
+  # ──────────────────────────────
+  #  ClamAV daemon
+  # ──────────────────────────────
   clamav:
     image: clamav/clamav:1.3
     container_name: clamav-dev
@@ -26,10 +34,13 @@ services:
     volumes:
       - clamdb:/var/lib/clamav
 
+  # ──────────────────────────────
+  #  Lookup API (read-only endpoints)
+  # ──────────────────────────────
   lookup-api:
     build: ./app-backend
     container_name: lookup-api-dev
-    command: npm run dev:lookup
+    command: npm run dev:lookup            # → script now uses tsx watch
     environment:
       - DATABASE_URL=sqlserver://db:1433;database=ComplaintDev;user=${DB_LOOKUP_USER};password=${DB_LOOKUP_PASSWORD};trustServerCertificate=true;encrypt=false
       - PORT=${LOOKUP_API_PORT}
@@ -41,12 +52,15 @@ services:
       - "3001:3001"
     volumes:
       - ./app-backend:/app
-      - /app/node_modules
+      - /app/node_modules                   # keep container-internal node_modules
 
+  # ──────────────────────────────
+  #  Transactional API (complaints, uploads)
+  # ──────────────────────────────
   trx-api:
     build: ./app-backend
     container_name: trx-api-dev
-    command: npm run dev:trx
+    command: npm run dev:trx               # → script now uses tsx watch
     environment:
       - DATABASE_URL=sqlserver://db:1433;database=ComplaintDev;user=${DB_SERVICE_USER};password=${DB_SERVICE_PASSWORD};trustServerCertificate=true;encrypt=false
       - CLAMAV_HOST=${CLAMAV_HOST}
@@ -63,8 +77,11 @@ services:
     volumes:
       - ./app-backend:/app
       - /app/node_modules
-      - ./app-backend/uploads:/app/uploads
+      - ./app-backend/uploads:/app/uploads  # persistent upload dir
 
+# ──────────────────────────────
+#  Named volumes
+# ──────────────────────────────
 volumes:
   mssql_data: {}
   clamdb: {}

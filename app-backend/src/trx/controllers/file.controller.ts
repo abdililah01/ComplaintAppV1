@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../common/prisma';
+import type { Prisma, PieceJointe } from '@prisma/client';        // ★ types only
 import { mkdir, writeFile } from 'fs/promises';
 import { resolve, join, extname } from 'path';
-import { Prisma } from '@prisma/client';          // FIX
 
-/* ---------- Types -------------------------------------------------------- */
+/* ---------- Local helper types ---------------------------------------- */
 
 export interface ProcessedFile {
   filename: string;
@@ -17,17 +17,7 @@ interface RequestWithFiles extends Request {
   body: { complaintId: string | number; [k: string]: unknown };
 }
 
-interface PieceJointeResult {
-  id: number;
-  Contenu: Buffer;
-  IdPlainte: number;
-  extensionPJ: string | null;
-  TypePieceJointe: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-/* ---------- Controller --------------------------------------------------- */
+/* ---------- Controller ------------------------------------------------- */
 
 export async function saveAttachments(
     req: RequestWithFiles,
@@ -43,17 +33,19 @@ export async function saveAttachments(
       return;
     }
 
-    /* save to disk ------------------------------------------------------- */
+    /* 1 ─ ensure upload directory exists -------------------------------- */
     const uploadDir = resolve(__dirname, '../../../uploads');
     await mkdir(uploadDir, { recursive: true });
 
-    /* save metadata + blob in one DB tx --------------------------------- */
+    /* 2 ─ save files + metadata inside one DB transaction --------------- */
     const saved = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const out: PieceJointeResult[] = [];
+      const out: PieceJointe[] = [];                              // ★ generated type
 
       for (const { filename, buffer, mimetype } of files) {
+        // store binary on disk
         await writeFile(join(uploadDir, filename), buffer);
 
+        // store metadata + blob in SQL Server
         const pj = await tx.pieceJointe.create({
           data: {
             Contenu: buffer,
