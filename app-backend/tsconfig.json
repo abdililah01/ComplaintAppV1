@@ -7,6 +7,7 @@
     "target": "es2016", /* Cible la version de JavaScript émise. ES2016 est un standard stable et largement compatible. */
     "forceConsistentCasingInFileNames": true, /* Impose que les noms de fichiers dans les imports aient la bonne casse. Prévient des bugs sur les systèmes sensibles à la casse comme Linux. */
     "moduleDetection": "force", /* Assure que TypeScript traite chaque fichier comme un module, ce qui est le comportement attendu. */
+    "outDir": "dist",
 
     /* Strict Type-Checking Options: */
     "strict": true, /* Active toutes les règles de vérification de type strictes. C'est la raison principale de l'utilisation de TypeScript. */
@@ -21,7 +22,9 @@
   },
   "include": [
     "src/**/*",
-    "tests/**/*"/* Indique à TypeScript de compiler tous les fichiers se trouvant dans le dossier 'src'. */
+    "tests/**/*",
+    "prisma/**/*.ts"
+
   ],
   "exclude": [
     "node_modules", /* Indique à TypeScript d'ignorer le dossier node_modules. */

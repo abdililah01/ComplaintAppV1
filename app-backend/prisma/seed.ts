@@ -1,38 +1,81 @@
-// Fichier: /app-backend/prisma/seed.ts
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+// prisma/seed.ts
+import { PrismaClient } from '@prisma/client'
+const prisma = new PrismaClient()
 
 async function main() {
-    console.log('Start seeding...');
+    console.log('Start seeding…')
 
+    /* ── Pays ───────────────────────────────────────────────────────── */
     await prisma.pays.createMany({
         data: [
-            { Id: 1, Nom: 'MAROC -- المغرب', Code: 'MA', Nationalite: 'Marocaine' },
-            { Id: 2, Nom: 'FRANCE -- فرنسا', Code: 'FR', Nationalite: 'Française' },
+            { Nom: 'MAROC -- المغرب', Code: 'MA', Nationalite: 'Marocaine' },
+            { Nom: 'FRANCE -- فرنسا', Code: 'FR', Nationalite: 'Française' },
         ],
-    });
 
+    })
+
+    /* ── Villes ─────────────────────────────────────────────────────── */
     await prisma.ville.createMany({
         data: [
-            { Id: 1, Nom: 'RABAT -- الرباط', IdPays: 1, CodePostal: '10000' },
-            { Id: 2, Nom: 'CASABLANCA -- الدار البيضاء', IdPays: 1, CodePostal: '20000' },
-            { Id: 3, Nom: 'PARIS -- باريس', IdPays: 2, CodePostal: '75000' },
+            { Nom: 'RABAT -- الرباط',              IdPays: 1, CodePostal: '10000' },
+            { Nom: 'CASABLANCA -- الدار البيضاء', IdPays: 1, CodePostal: '20000' },
+            { Nom: 'PARIS -- باريس',               IdPays: 2, CodePostal: '75000' },
         ],
-    });
 
+    })
+
+    /* ── SituationResidence ────────────────────────────────────────── */
     await prisma.situationResidence.createMany({
-        data: [{ Id: 1, Libelle: 'Propriétaire' }, { Id: 2, Libelle: 'Locataire' }],
-    });
+        data: [
+            { Libelle: 'Propriétaire' },
+            { Libelle: 'Locataire'    },
+        ],
 
-    console.log('Seeding finished.');
+    })
+
+    /* ── Profession ────────────────────────────────────────────────── */
+    await prisma.profession.createMany({
+        data: [
+            { Libelle: 'Salarié'  },
+            { Libelle: 'Artisan'  },
+            { Libelle: 'Étudiant' },
+        ],
+
+    })
+
+    /* ── Juridiction ───────────────────────────────────────────────── */
+    await prisma.juridiction.createMany({
+        data: [
+            { Nom: 'TRIBUNAL DE RABAT', Affichable: true },
+            { Nom: 'TRIBUNAL DE CASA',  Affichable: true },
+        ],
+
+    })
+
+    /* ── ObjetInjustice ────────────────────────────────────────────── */
+    await prisma.objetInjustice.createMany({
+        data: [
+            { Libelle: 'Vol'         },
+            { Libelle: 'Escroquerie' },
+        ],
+
+    })
+
+    /* ── RolePlainte ───────────────────────────────────────────────── */
+    await prisma.rolePlainte.createMany({
+        data: [
+            { Libelle: 'Plaignant' },
+            { Libelle: 'Défendeur' },
+        ],
+
+    })
+
+    console.log('Seeding finished.')
 }
 
 main()
-    .catch((e) => {
-        console.error(e);
-        process.exit(1); // Cette ligne est maintenant valide pour TypeScript
+    .catch(e => {
+        console.error(e)
+        process.exit(1)
     })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+    .finally(() => prisma.$disconnect())

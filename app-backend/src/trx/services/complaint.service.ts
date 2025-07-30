@@ -1,9 +1,5 @@
-// Fichier: /src/trx/services/complaint.service.ts
-
 import prisma from '../../common/prisma';
 
-// On définit une interface pour typer les données attendues par la procédure stockée
-// C'est un contrat clair entre notre API et la base de données.
 export interface CreateComplaintParams {
     PlaignantTypePersonne: 'P' | 'M';
     PlaignantNom: string;
@@ -13,57 +9,56 @@ export interface CreateComplaintParams {
     PlaignantIdVille: number;
     PlaignantIdSituationResidence: number;
     PlaignantIdProfession: number;
-    PlaignantSexe: 'M' | 'F' | 'X' | null;
-    PlaignantAdresse: string;
-    PlaignantTelephone: string;
-    PlaignantEmail: string;
+    PlaignantSexe: string | null;
+    PlaignantAdresse: string | null;
+    PlaignantTelephone: string | null;
+    PlaignantEmail: string | null;
     PlaignantNomCommercial: string | null;
     PlaignantNumeroRC: string | null;
-
     DefendeurTypePersonne: 'P' | 'M' | 'I';
     DefendeurNom: string | null;
     DefendeurNomCommercial: string | null;
-
+    IdObjetInjustice: number;
+    IdJuridiction: number;
     ResumePlainte: string;
     SessionId: string;
+    PhoneToVerify: string;
 }
 
-// On définit une interface pour le type de retour de la procédure
 export interface CreateComplaintResult {
     IdPlainte: bigint;
     TrackingCode: string;
 }
 
-/**
- * Appelle la procédure stockée sp_Mobile_CreatePlainte de manière sécurisée.
- * @param params - Les données de la plainte validées.
- * @returns Le résultat de la procédure stockée.
- */
-export const createComplaintInDB = async (params: CreateComplaintParams): Promise<CreateComplaintResult[]> => {
-    // NOTE: $queryRaw est utilisé ici car notre SP retourne un résultat (SELECT).
-    // C'est une méthode sécurisée qui utilise des requêtes paramétrées.
-    const result = await prisma.$queryRaw<CreateComplaintResult[]>`
-        EXEC dbo.sp_Mobile_CreatePlainte
-            @PlaignantTypePersonne = ${params.PlaignantTypePersonne},
-            @PlaignantNom = ${params.PlaignantNom},
-            @PlaignantPrenom = ${params.PlaignantPrenom},
-            @PlaignantCIN = ${params.PlaignantCIN},
-            @PlaignantIdPays = ${params.PlaignantIdPays},
-            @PlaignantIdVille = ${params.PlaignantIdVille},
-            @PlaignantIdSituationResidence = ${params.PlaignantIdSituationResidence},
-            @PlaignantIdProfession = ${params.PlaignantIdProfession},
-            @PlaignantSexe = ${params.PlaignantSexe},
-            @PlaignantAdresse = ${params.PlaignantAdresse},
-            @PlaignantTelephone = ${params.PlaignantTelephone},
-            @PlaignantEmail = ${params.PlaignantEmail},
-            @PlaignantNomCommercial = ${params.PlaignantNomCommercial},
-            @PlaignantNumeroRC = ${params.PlaignantNumeroRC},
-            @DefendeurTypePersonne = ${params.DefendeurTypePersonne},
-            @DefendeurNom = ${params.DefendeurNom},
-            @DefendeurNomCommercial = ${params.DefendeurNomCommercial},
-            @ResumePlainte = ${params.ResumePlainte},
-            @SessionId = ${params.SessionId};
-    `;
+export async function createComplaintInDB(
+    p: CreateComplaintParams
+): Promise<CreateComplaintResult[]> {
+    // inline all parameters into one EXEC string
+    const sql = `
+EXEC dbo.sp_Mobile_CreatePlainte
+  @PlaignantTypePersonne='${p.PlaignantTypePersonne}',
+  @PlaignantNom='${p.PlaignantNom.replace(/'/g, "''")}',
+  @PlaignantPrenom='${(p.PlaignantPrenom || '').replace(/'/g, "''")}',
+  @PlaignantCIN='${(p.PlaignantCIN || '').replace(/'/g, "''")}',
+  @PlaignantIdPays=${p.PlaignantIdPays},
+  @PlaignantIdVille=${p.PlaignantIdVille},
+  @PlaignantIdSituationResidence=${p.PlaignantIdSituationResidence},
+  @PlaignantIdProfession=${p.PlaignantIdProfession},
+  @PlaignantSexe='${p.PlaignantSexe || ''}',
+  @PlaignantAdresse='${(p.PlaignantAdresse || '').replace(/'/g, "''")}',
+  @PlaignantTelephone='${(p.PlaignantTelephone || '').replace(/'/g, "''")}',
+  @PlaignantEmail='${(p.PlaignantEmail || '').replace(/'/g, "''")}',
+  @PlaignantNomCommercial='${(p.PlaignantNomCommercial || '').replace(/'/g, "''")}',
+  @PlaignantNumeroRC='${(p.PlaignantNumeroRC || '').replace(/'/g, "''")}',
+  @DefendeurTypePersonne='${p.DefendeurTypePersonne}',
+  @DefendeurNom='${(p.DefendeurNom || '').replace(/'/g, "''")}',
+  @DefendeurNomCommercial='${(p.DefendeurNomCommercial || '').replace(/'/g, "''")}',
+  @IdObjetInjustice=${p.IdObjetInjustice},
+  @IdJuridiction=${p.IdJuridiction},
+  @ResumePlainte='${p.ResumePlainte.replace(/'/g, "''")}',
+  @SessionId='${p.SessionId.replace(/'/g, "''")}'
+`;
 
-    return result;
-};
+    // $queryRawUnsafe returns the SELECTed IdPlainte & TrackingCode
+    return prisma.$queryRawUnsafe<CreateComplaintResult[]>(sql);
+}

@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">93.1% </span>
+                <span class="strong">90% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>27/29</span>
+                <span class='fraction'>27/30</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">12.5% </span>
+                <span class="strong">5% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>3/24</span>
+                <span class='fraction'>1/20</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.85% </span>
+                <span class="strong">89.65% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>26/28</span>
+                <span class='fraction'>26/29</span>
             </div>
         
             
@@ -110,7 +110,11 @@
 <a name='L45'></a><a href='#L45'>45</a>
 <a name='L46'></a><a href='#L46'>46</a>
 <a name='L47'></a><a href='#L47'>47</a>
-<a name='L48'></a><a href='#L48'>48</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -154,12 +158,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">// Fichier: /app-backend/src/lookup/app.ts
+<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">// Fichier: /app-backend/src/lookup/app.ts (FINAL &amp; LINT-PERFECT)
 &nbsp;
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -181,37 +189,41 @@ app.use(express.urlencoded({ extended: true }));
 const limiter = rateLimit({ windowMs: 60_000, max: 300 });
 app.use(limiter);
 &nbsp;
-app.use((req, _res, next) =&gt; {
-  (req as any).id = (req as any).id || randomUUID();
-  logger.info({ id: (req as any).id, method: req.method, url: req.url }, 'Incoming request');
+app.use((req: Request, _res: Response, next: NextFunction) =&gt; {
+  req.id = randomUUID();
+  logger.info({ id: req.id, method: req.method, url: req.url }, 'Incoming request');
   next();
 });
 &nbsp;
 // Healthcheck
-app.get('/healthz', (_req, res) =&gt; res.json({ status: 'ok' }));
+app.get('/healthz', (_req: Request, res: Response) =&gt; res.json({ status: 'ok' }));
 &nbsp;
 // Routes
 app.use('/lookups', lookupRoutes);
 &nbsp;
 // 404 Handler
-app.use((req, res) =&gt; {
+app.use((req: Request, res: Response) =&gt; {
   res.status(404).json({ error: 'Not found', path: req.path });
 });
 &nbsp;
 // Error Handler
-app.use(<span class="fstat-no" title="function not covered" >(e</span>rr: any, req: express.Request, res: express.Response, _next: express.NextFunction) =&gt; {
-<span class="cstat-no" title="statement not covered" >  logger.error({ id: (req as any).id, error: err?.message, stack: err?.stack }, 'Unhandled error');</span>
-<span class="cstat-no" title="statement not covered" >  res.status(err?.status || 500).json({ error: err?.message || 'Internal error' });</span>
+app.use(<span class="fstat-no" title="function not covered" >(e</span>rr: Error, req: Request, res: Response) =&gt; {
+<span class="cstat-no" title="statement not covered" >  logger.error({ id: req.id, error: err?.message, stack: err?.stack }, 'Unhandled error');</span>
+&nbsp;
+  // Safe way to check for status property on error object
+  const statusCode = <span class="cstat-no" title="statement not covered" >'status' in err &amp;&amp; typeof err.status === 'number' ? err.status : 500;</span>
+&nbsp;
+<span class="cstat-no" title="statement not covered" >  res.status(statusCode).json({ error: err?.message || 'Internal error' });</span>
 });
 &nbsp;
-export default app; // Exporte l'instance d'Express pour les tests</pre></td></tr></table></pre>
+export default app;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-07-27T23:40:53.956Z
+                at 2025-07-29T20:07:36.529Z
             </div>
         <script src="../prettify.js"></script>
         <script>
