@@ -12,45 +12,53 @@ on:
 jobs:
   android-build:
     runs-on: ubuntu-latest
+    env:
+      # Make sure you’ve added API_BASE_URL in your repo’s Secrets
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
 
     steps:
       # 1. Check out your code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. Setup Node.js
+      # 2. Generate .env with the API base URL
+      - name: Create .env file
+        working-directory: mon-app-frontend
+        run: echo "API_BASE_URL=${API_BASE_URL}" > .env
+
+      # 3. Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      # 3. Install JS dependencies in the frontend folder
+      # 4. Install JS dependencies in the frontend folder
       - name: Install frontend dependencies
         working-directory: mon-app-frontend
         run: npm ci
 
-      # 4. Kill any leftover Gradle daemons (clean build)
+      # 5. Kill any leftover Gradle daemons (clean build)
       - name: Kill Gradle daemons
         working-directory: mon-app-frontend/android
         run: ./gradlew --stop
 
-      # 5. Clear the Gradle cache
+      # 6. Clear the Gradle cache
       - name: Clear Gradle cache
         run: rm -rf ~/.gradle/caches
 
-      # 6. Generate native Android project via Expo prebuild
+      # 7. Generate native Android project via Expo prebuild
       - name: Expo prebuild (android, clean)
         working-directory: mon-app-frontend
         run: npx expo prebuild --platform android --clean
 
-      # 7. Setup Java (JDK 17)
+      # 8. Setup Java (JDK 17)
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 8. Install Android SDK with exact SDK/NDK versions
+      # 9. Install Android SDK with exact SDK/NDK versions
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
         with:
@@ -59,12 +67,12 @@ jobs:
           ndk: '27.1.12297006'      # ndkVersion
           cmake: false
 
-      # 9. Assemble the release APK
+      # 10. Assemble the release APK
       - name: Assemble Release APK
         working-directory: mon-app-frontend/android
         run: ./gradlew assembleRelease --no-daemon
 
-      # 10. Upload the release APK as build artifact
+      # 11. Upload the release APK as build artifact
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
