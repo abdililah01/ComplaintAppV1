@@ -1,12 +1,16 @@
-// Fichier: /src/express.d.ts (CORRIGÉ)
+// files: src/types/express.d.ts
+import 'express-serve-static-core';
+import type { ProcessedFile } from '../trx/middleware/upload.middleware';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import 'express';
+declare module 'express-serve-static-core' {
+  interface Request {
+    /** existing custom request ID, if any */
+    id?: string;
 
-declare global {
-    namespace Express {
-        export interface Request {
-            id?: string;
-        }
-    }
+    /** injected by our Multer middleware */
+    files?: Express.Multer.File[];
+
+    /** set by validateAndProcessUploads */
+    processedFiles?: ProcessedFile[];
+  }
 }

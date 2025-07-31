@@ -1,9 +1,6 @@
-// Fichier: /src/trx/services/complaint.service.ts
-
 import prisma from '../../common/prisma';
+import { Prisma } from '@prisma/client';          // FIX: pull in Prisma types
 
-// On définit une interface pour typer les données attendues par la procédure stockée
-// C'est un contrat clair entre notre API et la base de données.
 export interface CreateComplaintParams {
     PlaignantTypePersonne: 'P' | 'M';
     PlaignantNom: string;
@@ -13,57 +10,58 @@ export interface CreateComplaintParams {
     PlaignantIdVille: number;
     PlaignantIdSituationResidence: number;
     PlaignantIdProfession: number;
-    PlaignantSexe: 'M' | 'F' | 'X' | null;
-    PlaignantAdresse: string;
-    PlaignantTelephone: string;
-    PlaignantEmail: string;
+    PlaignantSexe: string | null;
+    PlaignantAdresse: string | null;
+    PlaignantTelephone: string | null;
+    PlaignantEmail: string | null;
     PlaignantNomCommercial: string | null;
     PlaignantNumeroRC: string | null;
-
     DefendeurTypePersonne: 'P' | 'M' | 'I';
     DefendeurNom: string | null;
     DefendeurNomCommercial: string | null;
-
+    IdObjetInjustice: number;
+    IdJuridiction: number;
     ResumePlainte: string;
     SessionId: string;
+    PhoneToVerify: string;
 }
 
-// On définit une interface pour le type de retour de la procédure
 export interface CreateComplaintResult {
     IdPlainte: bigint;
     TrackingCode: string;
 }
 
 /**
- * Appelle la procédure stockée sp_Mobile_CreatePlainte de manière sécurisée.
- * @param params - Les données de la plainte validées.
- * @returns Le résultat de la procédure stockée.
+ * Runs the SQL-Server stored procedure `dbo.sp_Mobile_CreatePlainte`
+ * using **fully-parameterised** SQL to avoid injection attacks.
  */
-export const createComplaintInDB = async (params: CreateComplaintParams): Promise<CreateComplaintResult[]> => {
-    // NOTE: $queryRaw est utilisé ici car notre SP retourne un résultat (SELECT).
-    // C'est une méthode sécurisée qui utilise des requêtes paramétrées.
-    const result = await prisma.$queryRaw<CreateComplaintResult[]>`
-        EXEC dbo.sp_Mobile_CreatePlainte
-            @PlaignantTypePersonne = ${params.PlaignantTypePersonne},
-            @PlaignantNom = ${params.PlaignantNom},
-            @PlaignantPrenom = ${params.PlaignantPrenom},
-            @PlaignantCIN = ${params.PlaignantCIN},
-            @PlaignantIdPays = ${params.PlaignantIdPays},
-            @PlaignantIdVille = ${params.PlaignantIdVille},
-            @PlaignantIdSituationResidence = ${params.PlaignantIdSituationResidence},
-            @PlaignantIdProfession = ${params.PlaignantIdProfession},
-            @PlaignantSexe = ${params.PlaignantSexe},
-            @PlaignantAdresse = ${params.PlaignantAdresse},
-            @PlaignantTelephone = ${params.PlaignantTelephone},
-            @PlaignantEmail = ${params.PlaignantEmail},
-            @PlaignantNomCommercial = ${params.PlaignantNomCommercial},
-            @PlaignantNumeroRC = ${params.PlaignantNumeroRC},
-            @DefendeurTypePersonne = ${params.DefendeurTypePersonne},
-            @DefendeurNom = ${params.DefendeurNom},
-            @DefendeurNomCommercial = ${params.DefendeurNomCommercial},
-            @ResumePlainte = ${params.ResumePlainte},
-            @SessionId = ${params.SessionId};
-    `;
-
-    return result;
-};
+export async function createComplaintInDB(
+    p: CreateComplaintParams,
+): Promise<CreateComplaintResult[]> {
+    // FIX: use the `$queryRaw` *tagged template* — Prisma
+    //      handles escaping & type-mapping automatically.
+    return prisma.$queryRaw<CreateComplaintResult[]>`
+    EXEC dbo.sp_Mobile_CreatePlainte
+      @PlaignantTypePersonne         = ${p.PlaignantTypePersonne},
+      @PlaignantNom                  = ${p.PlaignantNom},
+      @PlaignantPrenom               = ${p.PlaignantPrenom},
+      @PlaignantCIN                  = ${p.PlaignantCIN},
+      @PlaignantIdPays               = ${p.PlaignantIdPays},
+      @PlaignantIdVille              = ${p.PlaignantIdVille},
+      @PlaignantIdSituationResidence = ${p.PlaignantIdSituationResidence},
+      @PlaignantIdProfession         = ${p.PlaignantIdProfession},
+      @PlaignantSexe                 = ${p.PlaignantSexe},
+      @PlaignantAdresse              = ${p.PlaignantAdresse},
+      @PlaignantTelephone            = ${p.PlaignantTelephone},
+      @PlaignantEmail                = ${p.PlaignantEmail},
+      @PlaignantNomCommercial        = ${p.PlaignantNomCommercial},
+      @PlaignantNumeroRC             = ${p.PlaignantNumeroRC},
+      @DefendeurTypePersonne         = ${p.DefendeurTypePersonne},
+      @DefendeurNom                  = ${p.DefendeurNom},
+      @DefendeurNomCommercial        = ${p.DefendeurNomCommercial},
+      @IdObjetInjustice              = ${p.IdObjetInjustice},
+      @IdJuridiction                 = ${p.IdJuridiction},
+      @ResumePlainte                 = ${p.ResumePlainte},
+      @SessionId                     = ${p.SessionId}
+  `;
+}
