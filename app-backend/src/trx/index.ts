@@ -1,6 +1,12 @@
+// ➊ Load env first (only once)
+// files: src/trx/index.ts
+import '../common/load-env';
+
+// ➋ Then bring in the rest
 import app from './app';
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT || process.env.TRX_API_PORT || 3000);
+
 app.listen(PORT, () => {
-  console.log(`🚀 API listening on http://localhost:${PORT}`);
+  console.log(`🚀 Transactional API listening on http://localhost:${PORT}`);
 });

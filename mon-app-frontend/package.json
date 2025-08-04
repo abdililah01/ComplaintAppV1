@@ -7,7 +7,20 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    
+    "start:prod": "cross-env NODE_ENV=production expo start --no-dev --minify",
+
+    "bundle:android": "expo export --platform android --minify --dump-sourcemap",
+    "bundle:ios":    "expo export --platform ios    --minify --dump-sourcemap",
+
+    
+    "obfuscate:android": "javascript-obfuscator dist/index.android.bundle \\\n  --output dist/index.android.bundle \\\n  --compact true \\\n  --control-flow-flattening true \\\n  --dead-code-injection true \\\n  --string-array true \\\n  --string-array-threshold 0.75 \\\n  --identifier-names-generator mangled",
+    "obfuscate:ios":     "javascript-obfuscator dist/index.ios.bundle    \\\n  --output dist/index.ios.bundle    \\\n  --compact true                    \\\n  --control-flow-flattening true    \\\n  --dead-code-injection true        \\\n  --string-array true               \\\n  --string-array-threshold 0.75     \\\n  --identifier-names-generator mangled",
+
+  
+    "build:android": "npm run bundle:android && npm run obfuscate:android",
+    "build:ios":     "npm run bundle:ios && npm run obfuscate:ios"
   },
   "dependencies": {
     "@react-native-picker/picker": "2.11.1",
@@ -28,8 +41,12 @@
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
+    "@babel/parser": "^7.28.0",
+    "@expo/metro-config": "^0.20.17",
     "@types/react": "~19.0.10",
     "@types/react-native": "^0.73.0",
+    "cross-env": "^10.0.0",
+    "javascript-obfuscator": "^4.1.1",
     "react-native-dotenv": "^3.4.11",
     "typescript": "~5.8.3"
   },
