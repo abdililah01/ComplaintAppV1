@@ -1,105 +1,138 @@
+// -----------------------------------------------------------------------------
+// file : src/trx/controllers/complaint.controller.ts
+// -----------------------------------------------------------------------------
 import { Request, Response, NextFunction } from 'express';
+
 import { CreateComplaintInput } from '../schemas/complaint.schema';
-import { createComplaintInDB, CreateComplaintParams } from '../services/complaint.service';
+import {
+  createComplaintInDB,
+  CreateComplaintParams,
+} from '../services/complaint.service';
 
-/**
- * Convert either payload shape into the DB-ready CreateComplaintParams.
- * Keeps a single source of truth for the service layer.
- */
+/* ────────────────────────── helpers ─────────────────────────────────────── */
+
+const toTypePersonne = (k: 'individual' | 'legal'): 'P' | 'M' =>
+  k === 'legal' ? 'M' : 'P';
+
+const inferTypePersonne = (
+  flag: 'individual' | 'legal' | undefined,
+  hasNumeroRC: boolean,
+): 'P' | 'M' => {
+  if (flag) return toTypePersonne(flag);
+  return hasNumeroRC ? 'M' : 'P';
+};
+
+/* ───────────── map incoming JSON → stored-procedure parameters ──────────── */
 function mapBodyToParams(
-    body: CreateComplaintInput,
-    sessionIdHeader: string | undefined,
+  body: CreateComplaintInput,
+  sessionIdHeader?: string,
 ): CreateComplaintParams {
-    if ('plaignant' in body) {
-        /* ─────────────────────────────────────────────────────────────────── */
-        /*  Nested (new) shape                                                */
-        /* ─────────────────────────────────────────────────────────────────── */
-        const { plaignant, defendeur, plainteDetails, phoneToVerify } = body;
+  /* ---------- 1.  Nested mobile style ---------- */
+  if ('plaignant' in body) {
+    const {
+      complainantType,
+      plaignant,
+      defendeur,
+      plainteDetails,
+      phoneToVerify,
+    } = body;
 
-        return {
-            PlaignantTypePersonne: 'P',
-            PlaignantNom: plaignant.nom,
-            PlaignantPrenom: plaignant.prenom,
-            PlaignantCIN: plaignant.cin,
-            PlaignantIdPays: plaignant.idPays,
-            PlaignantIdVille: plaignant.idVille,
-            PlaignantIdSituationResidence: plaignant.idSituationResidence,
-            PlaignantIdProfession: plaignant.idProfession,
-            PlaignantSexe: plaignant.sexe,
-            PlaignantAdresse: plaignant.adresse,
-            PlaignantTelephone: plaignant.telephone,
-            PlaignantEmail: plaignant.email,
-            PlaignantNomCommercial: null,
-            PlaignantNumeroRC: null,
+    const typePers = inferTypePersonne(
+      complainantType,
+      !!plaignant.numeroRC && plaignant.numeroRC.trim() !== '',
+    );
 
-            DefendeurTypePersonne: defendeur.type,
-            DefendeurNom: defendeur.nom ?? null,
-            DefendeurNomCommercial: defendeur.nomCommercial ?? null,
-
-            IdObjetInjustice: plainteDetails.idObjetInjustice,
-            IdJuridiction: plainteDetails.idJuridiction,
-            ResumePlainte: plainteDetails.resume,
-
-            SessionId: sessionIdHeader ?? '',
-            PhoneToVerify: phoneToVerify,
-        };
-    }
-
-    /* ─────────────────────────────────────────────────────────────────────  */
-    /*  Flat (legacy) shape                                                  */
-    /* ─────────────────────────────────────────────────────────────────────  */
-    const legacy = body; // TS already knows it's the flat variant
+    /* FIX ⬇︎ — never pass NULL, fallback to '-' */
+    const prenomForSQL =
+      plaignant.prenom && plaignant.prenom.trim() !== '' ? plaignant.prenom : '-';
 
     return {
-        PlaignantTypePersonne: legacy.PlaignantTypePersonne,
-        PlaignantNom: legacy.PlaignantNom,
-        PlaignantPrenom: legacy.PlaignantPrenom,
-        PlaignantCIN: legacy.PlaignantCIN,
-        PlaignantIdPays: legacy.PlaignantIdPays,
-        PlaignantIdVille: legacy.PlaignantIdVille,
-        PlaignantIdSituationResidence: legacy.PlaignantIdSituationResidence,
-        PlaignantIdProfession: legacy.PlaignantIdProfession,
-        PlaignantSexe: legacy.PlaignantSexe,
-        PlaignantAdresse: legacy.PlaignantAdresse,
-        PlaignantTelephone: legacy.PlaignantTelephone,
-        PlaignantEmail: legacy.PlaignantEmail,
-        PlaignantNomCommercial: legacy.PlaignantNomCommercial,
-        PlaignantNumeroRC: legacy.PlaignantNumeroRC,
+      /* ── plaignant ────────────────────────────────────────────────────── */
+      PlaignantTypePersonne: typePers,
+      PlaignantNom:          plaignant.nom,
+      PlaignantPrenom:       prenomForSQL,              // ★ always non-NULL
+      PlaignantCIN:          plaignant.cin,
+      PlaignantIdPays:       plaignant.idPays,
+      PlaignantIdVille:      plaignant.idVille,
+      PlaignantIdSituationResidence: plaignant.idSituationResidence,
+      PlaignantIdProfession: plaignant.idProfession,
+      PlaignantSexe:         plaignant.sexe,
+      PlaignantAdresse:      plaignant.adresse,
+      PlaignantTelephone:    plaignant.telephone,
+      PlaignantEmail:        plaignant.email,
+      PlaignantNomCommercial: typePers === 'M' ? plaignant.nom : null,
+      PlaignantNumeroRC:      typePers === 'M'
+                                ? (plaignant.numeroRC ?? '').trim() || 'N/A'
+                                : null,
 
-        DefendeurTypePersonne: legacy.DefendeurTypePersonne,
-        DefendeurNom: legacy.DefendeurNom,
-        DefendeurNomCommercial: legacy.DefendeurNomCommercial,
+      /* ── défendeur ───────────────────────────────────────────────────── */
+      DefendeurTypePersonne:  defendeur.type,
+      DefendeurNom:           defendeur.nom           ?? null,
+      DefendeurNomCommercial: defendeur.nomCommercial ?? null,
 
-        IdObjetInjustice: legacy.IdObjetInjustice,
-        IdJuridiction: legacy.IdJuridiction,
-        ResumePlainte: legacy.ResumePlainte,
+      /* ── plainte details ─────────────────────────────────────────────── */
+      IdObjetInjustice: plainteDetails.idObjetInjustice,
+      IdJuridiction:    plainteDetails.idJuridiction,
+      ResumePlainte:    plainteDetails.resume,
 
-        SessionId: legacy.SessionId,
-        PhoneToVerify: legacy.PhoneToVerify,
+      /* ── misc ────────────────────────────────────────────────────────── */
+      SessionId:     sessionIdHeader ?? '',
+      PhoneToVerify: phoneToVerify,
     };
+  }
+
+  /* ---------- 2.  Legacy flat style ---------- */
+  const p = body;
+  return {
+    PlaignantTypePersonne: p.PlaignantTypePersonne,
+    PlaignantNom:          p.PlaignantNom,
+    PlaignantPrenom:       p.PlaignantPrenom || '-',   // ★ fallback
+    PlaignantCIN:          p.PlaignantCIN,
+    PlaignantIdPays:       p.PlaignantIdPays,
+    PlaignantIdVille:      p.PlaignantIdVille,
+    PlaignantIdSituationResidence: p.PlaignantIdSituationResidence,
+    PlaignantIdProfession: p.PlaignantIdProfession,
+    PlaignantSexe:         p.PlaignantSexe,
+    PlaignantAdresse:      p.PlaignantAdresse,
+    PlaignantTelephone:    p.PlaignantTelephone,
+    PlaignantEmail:        p.PlaignantEmail,
+    PlaignantNomCommercial: p.PlaignantNomCommercial,
+    PlaignantNumeroRC:      p.PlaignantNumeroRC,
+
+    DefendeurTypePersonne:  p.DefendeurTypePersonne,
+    DefendeurNom:           p.DefendeurNom,
+    DefendeurNomCommercial: p.DefendeurNomCommercial,
+
+    IdObjetInjustice: p.IdObjetInjustice,
+    IdJuridiction:    p.IdJuridiction,
+    ResumePlainte:    p.ResumePlainte,
+
+    SessionId:     p.SessionId,
+    PhoneToVerify: p.PhoneToVerify,
+  };
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Controller                                                                */
-/* -------------------------------------------------------------------------- */
-
+/* ───────────────────────────── controller ───────────────────────────────── */
 export async function createComplaintHandler(
-    req: Request<{}, {}, CreateComplaintInput>,
-    res: Response,
-    next: NextFunction,
+  req: Request<{}, {}, CreateComplaintInput>,
+  res: Response,
+  next: NextFunction,
 ): Promise<void> {
-    try {
-        const params = mapBodyToParams(req.body, req.headers['x-session-id'] as string | undefined);
+  try {
+    const params = mapBodyToParams(
+      req.body,
+      req.headers['x-session-id'] as string | undefined,
+    );
 
-        const [result] = await createComplaintInDB(params);
+    const [result] = await createComplaintInDB(params);
 
-        res.status(201).json({
-            message: 'Complaint created',
-            complaintId: result.IdPlainte.toString(),
-            trackingCode: result.TrackingCode,
-        });
-    } catch (err) {
-        console.error('Error creating complaint', err);
-        next(err);
-    }
+    res.status(201).json({
+      message:      'Complaint created',
+      complaintId:  result.IdPlainte.toString(),
+      trackingCode: result.TrackingCode,
+    });
+  } catch (err) {
+    console.error('Error creating complaint', err);
+    next(err);
+  }
 }

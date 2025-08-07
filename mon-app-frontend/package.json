@@ -5,28 +5,23 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
+    "start:staging": "cross-env APP_ENV=staging EXPO_ENV_FILE=.env.staging expo start -c",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    
     "start:prod": "cross-env NODE_ENV=production expo start --no-dev --minify",
-
     "bundle:android": "expo export --platform android --minify --dump-sourcemap",
-    "bundle:ios":    "expo export --platform ios    --minify --dump-sourcemap",
-
-    
+    "bundle:ios": "expo export --platform ios    --minify --dump-sourcemap",
     "obfuscate:android": "javascript-obfuscator dist/index.android.bundle \\\n  --output dist/index.android.bundle \\\n  --compact true \\\n  --control-flow-flattening true \\\n  --dead-code-injection true \\\n  --string-array true \\\n  --string-array-threshold 0.75 \\\n  --identifier-names-generator mangled",
-    "obfuscate:ios":     "javascript-obfuscator dist/index.ios.bundle    \\\n  --output dist/index.ios.bundle    \\\n  --compact true                    \\\n  --control-flow-flattening true    \\\n  --dead-code-injection true        \\\n  --string-array true               \\\n  --string-array-threshold 0.75     \\\n  --identifier-names-generator mangled",
-
-  
+    "obfuscate:ios": "javascript-obfuscator dist/index.ios.bundle    \\\n  --output dist/index.ios.bundle    \\\n  --compact true                    \\\n  --control-flow-flattening true    \\\n  --dead-code-injection true        \\\n  --string-array true               \\\n  --string-array-threshold 0.75     \\\n  --identifier-names-generator mangled",
     "build:android": "npm run bundle:android && npm run obfuscate:android",
-    "build:ios":     "npm run bundle:ios && npm run obfuscate:ios"
+    "build:ios": "npm run bundle:ios && npm run obfuscate:ios"
   },
   "dependencies": {
     "@react-native-picker/picker": "2.11.1",
     "@react-navigation/native": "^7.1.14",
     "@react-navigation/native-stack": "^7.3.21",
-    "@tanstack/react-query": "^5.83.0",
+    "@tanstack/react-query": "^5.84.1",
     "axios": "^1.11.0",
     "expo": "~53.0.17",
     "expo-document-picker": "~13.1.6",
@@ -35,6 +30,7 @@
     "react": "19.0.0",
     "react-hook-form": "^7.61.1",
     "react-native": "0.79.5",
+    "react-native-get-random-values": "^1.11.0",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "zod": "^4.0.14"
@@ -45,6 +41,8 @@
     "@expo/metro-config": "^0.20.17",
     "@types/react": "~19.0.10",
     "@types/react-native": "^0.73.0",
+    "@types/uuid": "^10.0.0",
+    "babel-plugin-module-resolver": "^5.0.2",
     "cross-env": "^10.0.0",
     "javascript-obfuscator": "^4.1.1",
     "react-native-dotenv": "^3.4.11",

@@ -1,17 +1,26 @@
 /**
  * Loads environment variables.
  * • If .env.local exists, load it **first** so it *wins*.
- * • Always fall back to .env afterwards.
+ * • Then fall back to .env to fill any gaps.
  */
-import * as dotenv from 'dotenv';
-import fs from 'node:fs';
-import path from 'node:path';
+import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
-const projectRoot = process.cwd();                     // repo root when you run  npm run …
-const localEnv     = path.join(projectRoot, '.env.local');
-const baseEnv      = path.join(projectRoot, '.env');
+const projectRoot = path.resolve(__dirname, '..', '..');
+const localEnvPath = path.join(projectRoot, '.env.local');
+const baseEnvPath = path.join(projectRoot, '.env');
 
-if (fs.existsSync(localEnv)) {
-  dotenv.config({ path: localEnv });                   // highest priority
+// Load .env.local (highest priority)
+if (fs.existsSync(localEnvPath)) {
+  console.info(`⚙️  Loading environment from ${localEnvPath}`);
+  dotenv.config({ path: localEnvPath });
 }
-dotenv.config({ path: baseEnv, override: false });     // only fill the gaps
+
+// Load .env (fallback values only)
+if (fs.existsSync(baseEnvPath)) {
+  console.info(`⚙️  Loading environment from ${baseEnvPath}`);
+  dotenv.config({ path: baseEnvPath, override: false });
+} else {
+  console.warn(`⚠️  Base env file not found at ${baseEnvPath}`);
+}
