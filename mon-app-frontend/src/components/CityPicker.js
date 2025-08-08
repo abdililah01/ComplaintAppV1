@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { useCities } from '@/api/lookup';
+import { useCountries, useCities } from '../api/lookup';
 
 const colors = {
     textPrimary: '#1a202c',

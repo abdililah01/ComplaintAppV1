@@ -1,105 +1,97 @@
-// Fichier: /app-backend/tests/lookup.test.ts
-
 import request from 'supertest';
-// On importe l'instance d'Express depuis notre fichier app.ts, pas le serveur.
-import app from '../src/lookup/app';
+import app from '../src/lookup/app';   // Express instance (no listener)
 
-// Le 'describe' regroupe tous les tests liés aux endpoints de lookup
+// -------------------------------------------------------------------------
+//  Test-suite : Lookup-API
+// -------------------------------------------------------------------------
 describe('Lookup API Endpoints (/lookups)', () => {
-
-  // Test du Healthcheck de base
+  /* ── Healthcheck ────────────────────────────────────────────────────── */
   describe('GET /healthz', () => {
-    it('should return a 200 status and an ok message', async () => {
+    it('returns 200 and {status:"ok"}', async () => {
       const res = await request(app).get('/healthz');
-      expect(res.statusCode).toEqual(200);
+      expect(res.statusCode).toBe(200);
       expect(res.body).toEqual({ status: 'ok' });
     });
   });
 
-  // Tests pour la route /pays
+  /* ── /pays ──────────────────────────────────────────────────────────── */
   describe('GET /lookups/pays', () => {
-    it('should return a list of countries with the correct structure', async () => {
+    it('returns an array of countries', async () => {
       const res = await request(app).get('/lookups/pays');
-
-      expect(res.statusCode).toEqual(200);
+      expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toMatch(/json/);
-      expect(Array.isArray(res.body)).toBe(true);
-      // On s'attend à ce que notre script de seed ait inséré des pays
-      expect(res.body.length).toBeGreaterThan(0); 
-      // On vérifie que le premier objet a bien les propriétés 'id' et 'label'
-      expect(res.body[0]).toHaveProperty('id');
-      expect(res.body[0]).toHaveProperty('label');
-    });
-  });
-
-  // Tests pour la route /villes
-  describe('GET /lookups/villes', () => {
-    it('should return a list of cities for a valid idPays', async () => {
-      const res = await request(app).get('/lookups/villes?idPays=1'); // On teste avec l'ID du Maroc
-
-      expect(res.statusCode).toEqual(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThan(0);
       expect(res.body[0]).toHaveProperty('id');
       expect(res.body[0]).toHaveProperty('label');
     });
+  });
 
-    it('should return a 400 Bad Request error if idPays is missing', async () => {
+  /* ── /villes ────────────────────────────────────────────────────────── */
+  describe('GET /lookups/villes', () => {
+    it('returns cities for a valid idPays', async () => {
+      const res = await request(app).get('/lookups/villes?idPays=1');
+      expect(res.statusCode).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body[0]).toHaveProperty('id');
+      expect(res.body[0]).toHaveProperty('label');
+    });
+
+    it('returns 400 when idPays is missing', async () => {
       const res = await request(app).get('/lookups/villes');
-      expect(res.statusCode).toEqual(400);
+      expect(res.statusCode).toBe(400);
       expect(res.body).toHaveProperty('error');
     });
 
-    it('should return an empty list for an idPays that has no cities', async () => {
-      const res = await request(app).get('/lookups/villes?idPays=9999'); // Un ID qui n'existe pas
-      expect(res.statusCode).toEqual(200);
+    it('returns an empty array when the country has no cities', async () => {
+      const res = await request(app).get('/lookups/villes?idPays=9999');
+      expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toEqual(0);
+      expect(res.body.length).toBe(0);
     });
   });
 
-  // Tests pour les autres routes de lookup (on vérifie simplement qu'elles retournent un tableau)
-  
-  describe('GET /lookups/juridictions', () => {
-    it('should return a list of jurisdictions', async () => {
-      const res = await request(app).get('/lookups/juridictions');
-      expect(res.statusCode).toEqual(200);
+  /* ── Static list: /sexe ─────────────────────────────────────────────── */
+  describe('GET /lookups/sexe', () => {
+    it('returns the two gender options (M/F)', async () => {
+      const res = await request(app).get('/lookups/sexe');
+      expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body).toEqual([
+        { id: 'M', label: 'ذكر' },
+        { id: 'F', label: 'أنثى' },
+      ]);
     });
   });
 
-  describe('GET /lookups/objets', () => {
-    it('should return a list of complaint objects', async () => {
-      const res = await request(app).get('/lookups/objets');
-      expect(res.statusCode).toEqual(200);
-      expect(Array.isArray(res.body)).toBe(true);
+  /* ── Other look-ups (happy-path only) ───────────────────────────────── */
+  const simpleEndpoints = [
+    '/lookups/juridictions',
+    '/lookups/objets',
+    '/lookups/professions',
+    '/lookups/situations-residence',
+  ];
+
+  simpleEndpoints.forEach(path => {
+    describe(`GET ${path}`, () => {
+      it('returns an array', async () => {
+        const res = await request(app).get(path);
+        expect(res.statusCode).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        /* situations-residence should be seeded – sanity check */
+        if (path === '/lookups/situations-residence') {
+          expect(res.body.length).toBeGreaterThan(0);
+        }
+      });
     });
   });
 
-  describe('GET /lookups/professions', () => {
-    it('should return a list of professions', async () => {
-      const res = await request(app).get('/lookups/professions');
-      expect(res.statusCode).toEqual(200);
-      expect(Array.isArray(res.body)).toBe(true);
+  /* ── 404 guard ──────────────────────────────────────────────────────── */
+  describe('GET /non-existent-route', () => {
+    it('returns 404 for unknown paths', async () => {
+      const res = await request(app).get('/non-existent-route');
+      expect(res.statusCode).toBe(404);
+      expect(res.body).toEqual({ error: 'Not found', path: '/non-existent-route' });
     });
   });
-
-  describe('GET /lookups/situations-residence', () => {
-    it('should return a list of residence situations', async () => {
-      const res = await request(app).get('/lookups/situations-residence');
-      expect(res.statusCode).toEqual(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThan(0); // On sait qu'on a seedé cette table
-    });
-  });
-
-  // Test pour une route qui n'existe pas
-  describe('GET /a-non-existent-route', () => {
-    it('should return a 404 Not Found error', async () => {
-      const res = await request(app).get('/a-non-existent-route');
-      expect(res.statusCode).toEqual(404);
-      expect(res.body).toEqual({ error: 'Not found', path: '/a-non-existent-route' });
-    });
-  });
-
 });

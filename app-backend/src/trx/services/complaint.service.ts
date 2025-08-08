@@ -1,47 +1,49 @@
-//file app-backend/src/trx/services/complaint.service.ts
 import prisma from '../../common/prisma';
-import { Prisma } from '@prisma/client';          // FIX: pull in Prisma types
+
+/* ─────────────── param & result types ─────────────────────────────────── */
 
 export interface CreateComplaintParams {
-    PlaignantTypePersonne: 'P' | 'M';
-    PlaignantNom: string;
-    PlaignantPrenom: string | null;
-    PlaignantCIN: string | null;
-    PlaignantIdPays: number;
-    PlaignantIdVille: number;
-    PlaignantIdSituationResidence: number;
-    PlaignantIdProfession: number;
-    PlaignantSexe: string | null;
-    PlaignantAdresse: string | null;
-    PlaignantTelephone: string | null;
-    PlaignantEmail: string | null;
-    PlaignantNomCommercial: string | null;
-    PlaignantNumeroRC: string | null;
-    DefendeurTypePersonne: 'P' | 'M' | 'I';
-    DefendeurNom: string | null;
-    DefendeurNomCommercial: string | null;
-    IdObjetInjustice: number;
-    IdJuridiction: number;
-    ResumePlainte: string;
-    SessionId: string;
-    PhoneToVerify: string;
+  /* plaignant ----------------------------------------------------------- */
+  PlaignantTypePersonne        : 'P' | 'M';
+  PlaignantNom                 : string | null;  // nullable when legal
+  PlaignantPrenom              : string | null;  // nullable when legal
+  PlaignantCIN                 : string | null;
+  PlaignantIdPays              : number;
+  PlaignantIdVille             : number;
+  PlaignantIdSituationResidence: number;
+  PlaignantIdProfession        : number;
+  PlaignantSexe                : string | null;
+  PlaignantAdresse             : string | null;
+  PlaignantTelephone           : string | null;
+  PlaignantEmail               : string | null;
+  PlaignantNomCommercial       : string | null;
+  PlaignantNumeroRC            : string | null;
+
+  /* défendeur ----------------------------------------------------------- */
+  DefendeurTypePersonne        : 'P' | 'M' | 'I';
+  DefendeurNom                 : string | null;
+  DefendeurNomCommercial       : string | null;
+
+  /* plainte ------------------------------------------------------------- */
+  IdObjetInjustice             : number;
+  IdJuridiction                : number;
+  ResumePlainte                : string;
+
+  /* misc --------------------------------------------------------------- */
+  SessionId                    : string;
+  PhoneToVerify                : string;
 }
 
 export interface CreateComplaintResult {
-    IdPlainte: bigint;
-    TrackingCode: string;
+  IdPlainte   : bigint;
+  TrackingCode: string;
 }
 
-/**
- * Runs the SQL-Server stored procedure `dbo.sp_Mobile_CreatePlainte`
- * using **fully-parameterised** SQL to avoid injection attacks.
- */
+/* ─────────────── call the stored procedure via Prisma ────────────────── */
 export async function createComplaintInDB(
-    p: CreateComplaintParams,
+  p: CreateComplaintParams,
 ): Promise<CreateComplaintResult[]> {
-    // FIX: use the `$queryRaw` *tagged template* — Prisma
-    //      handles escaping & type-mapping automatically.
-    return prisma.$queryRaw<CreateComplaintResult[]>`
+  return prisma.$queryRaw<CreateComplaintResult[]>`
     EXEC dbo.sp_Mobile_CreatePlainte
       @PlaignantTypePersonne         = ${p.PlaignantTypePersonne},
       @PlaignantNom                  = ${p.PlaignantNom},
