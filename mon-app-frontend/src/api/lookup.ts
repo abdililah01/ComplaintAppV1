@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// file: src/api/lookup.ts            ⟶ 100 % replacement
+// file: mon-app-frontend/src/api/lookup.ts
 // Lookup micro-service (port 3001) – React-Query hooks
 // -----------------------------------------------------------------------------
 

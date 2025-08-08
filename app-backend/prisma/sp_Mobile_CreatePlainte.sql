@@ -1,3 +1,5 @@
+-- file: database/sp_Mobile_CreatePlainte.sql
+
 USE ComplaintDev;
 GO
 
@@ -5,9 +7,9 @@ IF OBJECT_ID(N'dbo.sp_Mobile_CreatePlainte','P') IS NOT NULL
     DROP PROCEDURE dbo.sp_Mobile_CreatePlainte;
 GO
 
-/* ===========================================================================
+/* ==========================================================================
    Create one plainte, its plaignant & défendeur, and return Id + code suivi
-   ========================================================================== */
+   ======================================================================== */
 CREATE PROCEDURE dbo.sp_Mobile_CreatePlainte
     /* ─── PLAIGNANT ─────────────────────────────────────────────────────── */
     @PlaignantTypePersonne         CHAR(1),
@@ -28,6 +30,7 @@ CREATE PROCEDURE dbo.sp_Mobile_CreatePlainte
     @DefendeurTypePersonne         CHAR(1),
     @DefendeurNom                  NVARCHAR(600)  = NULL,
     @DefendeurNomCommercial        NVARCHAR(600)  = NULL,
+    @DefendeurNumeroRC             NVARCHAR(100)  = NULL,   -- 🔸 ADDED
     /* ─── PLAINTE ───────────────────────────────────────────────────────── */
     @IdObjetInjustice              INT,
     @IdJuridiction                 INT,
@@ -133,8 +136,8 @@ BEGIN
         ELSE
         BEGIN
             INSERT dbo.PersonneMorale
-                   (NomCommercial, IdJuridiction, SessionId)
-            VALUES (@DefendeurNomCommercial, @IdJuridiction, @SessionId);
+                   (NomCommercial, NumeroRC, IdJuridiction, SessionId) -- 🔸 NumeroRC ADDED
+            VALUES (@DefendeurNomCommercial, @DefendeurNumeroRC, @IdJuridiction, @SessionId);
 
             SET @IdPersMorDefendeur = SCOPE_IDENTITY();
 
