@@ -1,39 +1,49 @@
-// files: src/trx/app.ts
-import express from 'express';
+
+// FILE : app-backend/src/trx/app.ts
+import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import complaintRoutes from './routes/complaints.routes';
 
 const app = express();
 
-// parse JSON bodies
-app.use(express.json());
-
-// health check
-app.get('/healthz', (_req, res) => res.json({ ok: true }));
-
-// serve your uploads folder at /uploads
-// Clients can GET e.g. http://<host>/uploads/p1.png
+// Security middlewares
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: '2mb' }));
 app.use(
-    '/uploads',
-    express.static(
-        // relative to this file (src/trx), go up two levels into <project_root>/uploads
-        path.join(__dirname, '../../uploads'),
-        {
-            setHeaders(res, filePath) {
-                // optional: prevent caching sensitive files indefinitely
-                res.setHeader('Cache-Control', 'private, max-age=3600');
-            },
-        }
-    )
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
 );
 
-// mount transactional API under /api/v1
+// Health check
+app.get('/healthz', (_req: Request, res: Response) => res.json({ ok: true }));
+
+// Static uploads (e.g. GET /uploads/p1.png)
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '../../uploads'), {
+    setHeaders(res) {
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+    },
+  })
+);
+
+// Mount your complaint routes
 app.use('/api/v1', complaintRoutes);
 
-// global error handler
-app.use((err: any, _req: any, res: any, _next: any) => {
+// Global error handler
+app.use(
+  (err: any, _req: Request, res: Response, _next: NextFunction) => {
     console.error(err);
     res.status(500).json({ error: err.message || 'Internal server error' });
-});
+  }
+);
 
 export default app;
