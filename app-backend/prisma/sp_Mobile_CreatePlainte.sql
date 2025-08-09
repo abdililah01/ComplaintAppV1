@@ -1,5 +1,4 @@
 -- file: database/sp_Mobile_CreatePlainte.sql
-
 USE ComplaintDev;
 GO
 
@@ -12,31 +11,37 @@ GO
    ======================================================================== */
 CREATE PROCEDURE dbo.sp_Mobile_CreatePlainte
     /* ─── PLAIGNANT ─────────────────────────────────────────────────────── */
-    @PlaignantTypePersonne         CHAR(1),
-    @PlaignantNom                  NVARCHAR(600),
-    @PlaignantPrenom               NVARCHAR(600)  = NULL,
-    @PlaignantCIN                  NVARCHAR(100)  = NULL,
-    @PlaignantIdPays               INT,
-    @PlaignantIdVille              INT,
-    @PlaignantIdSituationResidence INT,
-    @PlaignantIdProfession         INT,
-    @PlaignantSexe                 CHAR(1)        = NULL,
-    @PlaignantAdresse              NVARCHAR(1998) = NULL,
-    @PlaignantTelephone            VARCHAR(30)    = NULL,
-    @PlaignantEmail                NVARCHAR(200)  = NULL,
-    @PlaignantNomCommercial        NVARCHAR(600)  = NULL,
-    @PlaignantNumeroRC             NVARCHAR(100)  = NULL,
+    @PlaignantTypePersonne          CHAR(1),
+    @PlaignantNom                   NVARCHAR(600),
+    @PlaignantPrenom                NVARCHAR(600)   = NULL,
+    @PlaignantCIN                   NVARCHAR(100)   = NULL,
+    @PlaignantIdPays                INT,
+    @PlaignantIdVille               INT,
+    @PlaignantIdSituationResidence  INT,
+    @PlaignantIdProfession          INT,
+    @PlaignantSexe                  CHAR(1)         = NULL,
+    @PlaignantAdresse               NVARCHAR(1998)  = NULL,
+    @PlaignantTelephone             VARCHAR(30)     = NULL,
+    @PlaignantEmail                 NVARCHAR(200)   = NULL,
+
+    @PlaignantNomCommercial         NVARCHAR(600)   = NULL,  -- required when 'M'
+    @PlaignantNumeroRC              NVARCHAR(100)   = NULL,  -- optional
+    @PlaignantSiegeSocial           NVARCHAR(1000)  = NULL,  -- REQUIRED when 'M' (mapped to PersonneMorale.EnseigneSociale)
+    @PlaignantNomRepresentantLegal  NVARCHAR(600)   = NULL,  -- REQUIRED when 'M'
+
     /* ─── DÉFENDEUR ─────────────────────────────────────────────────────── */
-    @DefendeurTypePersonne         CHAR(1),
-    @DefendeurNom                  NVARCHAR(600)  = NULL,
-    @DefendeurNomCommercial        NVARCHAR(600)  = NULL,
-    @DefendeurNumeroRC             NVARCHAR(100)  = NULL,   -- 🔸 ADDED
+    @DefendeurTypePersonne          CHAR(1),
+    @DefendeurNom                   NVARCHAR(600)   = NULL,
+    @DefendeurNomCommercial         NVARCHAR(600)   = NULL,  -- required when 'M'
+    @DefendeurNumeroRC              NVARCHAR(100)   = NULL,  -- optional
+
     /* ─── PLAINTE ───────────────────────────────────────────────────────── */
-    @IdObjetInjustice              INT,
-    @IdJuridiction                 INT,
-    @ResumePlainte                 NVARCHAR(MAX),
+    @IdObjetInjustice               INT,
+    @IdJuridiction                  INT,
+    @ResumePlainte                  NVARCHAR(MAX),
+
     /* ─── MISC ──────────────────────────────────────────────────────────── */
-    @SessionId                     NVARCHAR(500)
+    @SessionId                      NVARCHAR(500)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -47,6 +52,36 @@ BEGIN
     BEGIN
         RAISERROR(N'TypePersonne invalide',16,1);
         RETURN;
+    END
+
+    /* Business rules (server-side validation) ----------------------------- */
+    IF @PlaignantTypePersonne = 'M'
+    BEGIN
+        IF NULLIF(LTRIM(RTRIM(@PlaignantNomCommercial)), N'') IS NULL
+        BEGIN
+            RAISERROR(N'NomCommercial (التسمية) requis pour le plaignant personne morale',16,1);
+            RETURN;
+        END
+        IF NULLIF(LTRIM(RTRIM(@PlaignantSiegeSocial)), N'') IS NULL
+        BEGIN
+            RAISERROR(N'SiegeSocial (المقر الإجتماعي) requis pour le plaignant personne morale',16,1);
+            RETURN;
+        END
+        IF NULLIF(LTRIM(RTRIM(@PlaignantNomRepresentantLegal)), N'') IS NULL
+        BEGIN
+            RAISERROR(N'Nom du représentant légal (الممثل القانوني) requis pour le plaignant personne morale',16,1);
+            RETURN;
+        END
+    END
+
+    IF @DefendeurTypePersonne = 'M'
+    BEGIN
+        IF NULLIF(LTRIM(RTRIM(@DefendeurNomCommercial)), N'') IS NULL
+        BEGIN
+            RAISERROR(N'NomCommercial (التسمية) requis pour le défendeur personne morale',16,1);
+            RETURN;
+        END
+        -- NumeroRC optional by business rule
     END
 
     BEGIN TRY
@@ -74,10 +109,15 @@ BEGIN
         END
         ELSE
         BEGIN
+            /* NumeroRC is NOT NULL in table -> fallback to safe value when missing */
+            DECLARE @PlaignantNumeroRCFinal NVARCHAR(100) =
+                COALESCE(NULLIF(LTRIM(RTRIM(@PlaignantNumeroRC)),N''), N'N/A');
+
             INSERT dbo.PersonneMorale
-                   (NomCommercial, NumeroRC, IdJuridiction, SessionId)
-            VALUES (@PlaignantNomCommercial, @PlaignantNumeroRC,
-                    @IdJuridiction, @SessionId);
+                   (NomCommercial, NumeroRC, IdJuridiction,
+                    NomRepresentantLegal, EnseigneSociale, SessionId)
+            VALUES (@PlaignantNomCommercial, @PlaignantNumeroRCFinal, @IdJuridiction,
+                    @PlaignantNomRepresentantLegal, @PlaignantSiegeSocial, @SessionId);
 
             SET @IdPersMorPlaignant = SCOPE_IDENTITY();
         END
@@ -109,16 +149,16 @@ BEGIN
             SET @IdPartieDefendeur = SCOPE_IDENTITY();
         END
 
-        /* P = personne physique  (NOT-NULL fallback values added) ---------- */
+        /* P = personne physique (fallbacks for NOT NULL cols) -------------- */
         ELSE IF @DefendeurTypePersonne = 'P'
         BEGIN
             INSERT dbo.PersonnePhysique
                    (Nom, Prenom, CIN,
                     IdPays, IdVille, IdSituationResidence,
                     IdProfession, Sexe, AdressePrimaire, SessionId)
-            VALUES (@DefendeurNom, N'-', N'-',        -- Prenom & CIN placeholders
-                    1, 1, 1,                          -- generic FK rows
-                    NULL, NULL, N'-',                 -- AdressePrimaire placeholder
+            VALUES (@DefendeurNom, N'-', N'-',        -- placeholders
+                    1, 1, 1,
+                    NULL, NULL, N'-',
                     @SessionId);
 
             SET @IdPersPhysDefendeur = SCOPE_IDENTITY();
@@ -132,12 +172,15 @@ BEGIN
             SET @IdPartieDefendeur = SCOPE_IDENTITY();
         END
 
-        /* M = personne morale --------------------------------------------- */
+        /* M = personne morale (NomCommercial required; RC optional) -------- */
         ELSE
         BEGIN
+            DECLARE @DefendeurNumeroRCFinal NVARCHAR(100) =
+                COALESCE(NULLIF(LTRIM(RTRIM(@DefendeurNumeroRC)),N''), N'N/A');
+
             INSERT dbo.PersonneMorale
-                   (NomCommercial, NumeroRC, IdJuridiction, SessionId) -- 🔸 NumeroRC ADDED
-            VALUES (@DefendeurNomCommercial, @DefendeurNumeroRC, @IdJuridiction, @SessionId);
+                   (NomCommercial, NumeroRC, IdJuridiction, SessionId)
+            VALUES (@DefendeurNomCommercial, @DefendeurNumeroRCFinal, @IdJuridiction, @SessionId);
 
             SET @IdPersMorDefendeur = SCOPE_IDENTITY();
 
@@ -171,18 +214,16 @@ BEGIN
         VALUES (@IdPartiePlaignant, @IdPlainte, 1),  -- 1 = plaignant
                (@IdPartieDefendeur, @IdPlainte, 2);  -- 2 = défendeur
 
-
         COMMIT;
 
         /* =================================================================
            4)  Return output
            ================================================================= */
-        SELECT @IdPlainte   AS IdPlainte,
+        SELECT @IdPlainte AS IdPlainte,
                @TrackingCode AS TrackingCode;
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK;
-        /* propagate detailed SQL error */
         THROW;
     END CATCH
 END
