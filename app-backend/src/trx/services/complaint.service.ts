@@ -1,67 +1,78 @@
 import prisma from '../../common/prisma';
-import { Prisma } from '@prisma/client';          // FIX: pull in Prisma types
 
-export interface CreateComplaintParams {
-    PlaignantTypePersonne: 'P' | 'M';
-    PlaignantNom: string;
-    PlaignantPrenom: string | null;
-    PlaignantCIN: string | null;
-    PlaignantIdPays: number;
-    PlaignantIdVille: number;
-    PlaignantIdSituationResidence: number;
-    PlaignantIdProfession: number;
-    PlaignantSexe: string | null;
-    PlaignantAdresse: string | null;
-    PlaignantTelephone: string | null;
-    PlaignantEmail: string | null;
-    PlaignantNomCommercial: string | null;
-    PlaignantNumeroRC: string | null;
-    DefendeurTypePersonne: 'P' | 'M' | 'I';
-    DefendeurNom: string | null;
-    DefendeurNomCommercial: string | null;
-    IdObjetInjustice: number;
-    IdJuridiction: number;
-    ResumePlainte: string;
-    SessionId: string;
-    PhoneToVerify: string;
+export type CreateComplaintParams = {
+  PlaignantTypePersonne: 'P' | 'M';
+  PlaignantNom: string | null;
+  PlaignantPrenom: string | null;
+  PlaignantCIN: string | null;
+  PlaignantNomCommercial: string | null;     // ✅ matches SP
+  PlaignantNumeroRC: string | null;
+  PlaignantIdPays: number;
+  PlaignantIdVille: number;
+  PlaignantIdSituationResidence: number | null;
+  PlaignantIdProfession: number | null;
+  PlaignantSexe?: string | null;
+  PlaignantAdresse?: string | null;
+  PlaignantTelephone?: string | null;
+  PlaignantEmail?: string | null;
+  PlaignantSiegeSocial?: string | null;
+  PlaignantNomRepresentantLegal?: string | null;
+
+  DefendeurTypePersonne: 'P' | 'M' | 'I';
+  DefendeurNom: string | null;
+  DefendeurNomCommercial: string | null;     // ✅ matches SP
+  DefendeurNumeroRC: string | null;
+
+  IdObjetInjustice: number;
+  IdJuridiction: number;
+  ResumePlainte: string;
+
+  SessionId?: string | null;
+};
+
+export async function createComplaint(p: CreateComplaintParams) {
+  // The stored proc SELECTs: complaintId (BIGINT) and trackingCode (NVARCHAR)
+  const rows: Array<{ complaintId: bigint; trackingCode: string }> =
+    await prisma.$queryRaw`
+      EXEC dbo.sp_Mobile_CreatePlainte
+        @PlaignantTypePersonne          = ${p.PlaignantTypePersonne},
+        @PlaignantNom                   = ${p.PlaignantNom},
+        @PlaignantPrenom                = ${p.PlaignantPrenom},
+        @PlaignantCIN                   = ${p.PlaignantCIN},
+        @PlaignantIdPays                = ${p.PlaignantIdPays},
+        @PlaignantIdVille               = ${p.PlaignantIdVille},
+        @PlaignantIdSituationResidence  = ${p.PlaignantIdSituationResidence},
+        @PlaignantIdProfession          = ${p.PlaignantIdProfession},
+        @PlaignantSexe                  = ${p.PlaignantSexe ?? null},
+        @PlaignantAdresse               = ${p.PlaignantAdresse ?? null},
+        @PlaignantTelephone             = ${p.PlaignantTelephone ?? null},
+        @PlaignantEmail                 = ${p.PlaignantEmail ?? null},
+
+        @PlaignantNomCommercial         = ${p.PlaignantNomCommercial},
+        @PlaignantNumeroRC              = ${p.PlaignantNumeroRC},
+        @PlaignantSiegeSocial           = ${p.PlaignantSiegeSocial ?? null},
+        @PlaignantNomRepresentantLegal  = ${p.PlaignantNomRepresentantLegal ?? null},
+
+        @DefendeurTypePersonne          = ${p.DefendeurTypePersonne},
+        @DefendeurNom                   = ${p.DefendeurNom},
+        @DefendeurNomCommercial         = ${p.DefendeurNomCommercial},
+        @DefendeurNumeroRC              = ${p.DefendeurNumeroRC},
+
+        @IdObjetInjustice               = ${p.IdObjetInjustice},
+        @IdJuridiction                  = ${p.IdJuridiction},
+        @ResumePlainte                  = ${p.ResumePlainte},
+
+        @SessionId                      = ${p.SessionId ?? null};
+    `;
+
+  const r = rows?.[0];
+  if (!r) throw new Error('sp_Mobile_CreatePlainte returned no result');
+
+  return {
+    complaintId: r.complaintId.toString(), // BigInt → string for JSON
+    trackingCode: r.trackingCode,
+  };
 }
 
-export interface CreateComplaintResult {
-    IdPlainte: bigint;
-    TrackingCode: string;
-}
-
-/**
- * Runs the SQL-Server stored procedure `dbo.sp_Mobile_CreatePlainte`
- * using **fully-parameterised** SQL to avoid injection attacks.
- */
-export async function createComplaintInDB(
-    p: CreateComplaintParams,
-): Promise<CreateComplaintResult[]> {
-    // FIX: use the `$queryRaw` *tagged template* — Prisma
-    //      handles escaping & type-mapping automatically.
-    return prisma.$queryRaw<CreateComplaintResult[]>`
-    EXEC dbo.sp_Mobile_CreatePlainte
-      @PlaignantTypePersonne         = ${p.PlaignantTypePersonne},
-      @PlaignantNom                  = ${p.PlaignantNom},
-      @PlaignantPrenom               = ${p.PlaignantPrenom},
-      @PlaignantCIN                  = ${p.PlaignantCIN},
-      @PlaignantIdPays               = ${p.PlaignantIdPays},
-      @PlaignantIdVille              = ${p.PlaignantIdVille},
-      @PlaignantIdSituationResidence = ${p.PlaignantIdSituationResidence},
-      @PlaignantIdProfession         = ${p.PlaignantIdProfession},
-      @PlaignantSexe                 = ${p.PlaignantSexe},
-      @PlaignantAdresse              = ${p.PlaignantAdresse},
-      @PlaignantTelephone            = ${p.PlaignantTelephone},
-      @PlaignantEmail                = ${p.PlaignantEmail},
-      @PlaignantNomCommercial        = ${p.PlaignantNomCommercial},
-      @PlaignantNumeroRC             = ${p.PlaignantNumeroRC},
-      @DefendeurTypePersonne         = ${p.DefendeurTypePersonne},
-      @DefendeurNom                  = ${p.DefendeurNom},
-      @DefendeurNomCommercial        = ${p.DefendeurNomCommercial},
-      @IdObjetInjustice              = ${p.IdObjetInjustice},
-      @IdJuridiction                 = ${p.IdJuridiction},
-      @ResumePlainte                 = ${p.ResumePlainte},
-      @SessionId                     = ${p.SessionId}
-  `;
-}
+// Export alias so Jest mock in tests/trx.test.ts works
+export const createComplaintInDB = createComplaint;

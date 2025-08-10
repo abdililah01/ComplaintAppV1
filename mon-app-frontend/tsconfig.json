@@ -5,7 +5,8 @@
     "jsx": "react-native",
     "baseUrl": ".",
     "paths": {
-      "@env": ["./src/env.d.ts"]
+      "@env": ["./src/env.d.ts"],
+      "@/*": ["src/*"]
     }
   },
   "include": [

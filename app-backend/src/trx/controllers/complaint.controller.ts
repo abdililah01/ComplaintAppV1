@@ -1,105 +1,91 @@
-import { Request, Response, NextFunction } from 'express';
-import { CreateComplaintInput } from '../schemas/complaint.schema';
-import { createComplaintInDB, CreateComplaintParams } from '../services/complaint.service';
+import type { Request, Response } from 'express';
+import { createComplaintInDB } from '../services/complaint.service';
+import type { CreateComplaintBody } from '../schemas/complaint.schema';
 
-/**
- * Convert either payload shape into the DB-ready CreateComplaintParams.
- * Keeps a single source of truth for the service layer.
- */
-function mapBodyToParams(
-    body: CreateComplaintInput,
-    sessionIdHeader: string | undefined,
-): CreateComplaintParams {
-    if ('plaignant' in body) {
-        /* ─────────────────────────────────────────────────────────────────── */
-        /*  Nested (new) shape                                                */
-        /* ─────────────────────────────────────────────────────────────────── */
-        const { plaignant, defendeur, plainteDetails, phoneToVerify } = body;
+export const createComplaintHandler = async (req: Request, res: Response) => {
+  const body = req.body as CreateComplaintBody;
+  const params = mapBodyToSpParams(body);
 
-        return {
-            PlaignantTypePersonne: 'P',
-            PlaignantNom: plaignant.nom,
-            PlaignantPrenom: plaignant.prenom,
-            PlaignantCIN: plaignant.cin,
-            PlaignantIdPays: plaignant.idPays,
-            PlaignantIdVille: plaignant.idVille,
-            PlaignantIdSituationResidence: plaignant.idSituationResidence,
-            PlaignantIdProfession: plaignant.idProfession,
-            PlaignantSexe: plaignant.sexe,
-            PlaignantAdresse: plaignant.adresse,
-            PlaignantTelephone: plaignant.telephone,
-            PlaignantEmail: plaignant.email,
-            PlaignantNomCommercial: null,
-            PlaignantNumeroRC: null,
+  try {
+    const rows: any = await createComplaintInDB(params);
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    const complaintIdRaw = row?.IdPlainte ?? row?.complaintId;
+    const trackingCode = row?.TrackingCode ?? row?.trackingCode;
 
-            DefendeurTypePersonne: defendeur.type,
-            DefendeurNom: defendeur.nom ?? null,
-            DefendeurNomCommercial: defendeur.nomCommercial ?? null,
-
-            IdObjetInjustice: plainteDetails.idObjetInjustice,
-            IdJuridiction: plainteDetails.idJuridiction,
-            ResumePlainte: plainteDetails.resume,
-
-            SessionId: sessionIdHeader ?? '',
-            PhoneToVerify: phoneToVerify,
-        };
+    if (complaintIdRaw == null || !trackingCode) {
+      return res.status(500).json({ error: 'Stored procedure returned no data' });
     }
 
-    /* ─────────────────────────────────────────────────────────────────────  */
-    /*  Flat (legacy) shape                                                  */
-    /* ─────────────────────────────────────────────────────────────────────  */
-    const legacy = body; // TS already knows it's the flat variant
+    return res.status(201).json({
+      complaintId: complaintIdRaw.toString(),
+      trackingCode,
+    });
+  } catch (err: any) {
+    console.error({ err }, 'createComplaint failed');
+    return res.status(500).json({ error: 'Failed to create complaint' });
+  }
+};
+
+function mapBodyToSpParams(body: CreateComplaintBody) {
+  const isNested = 'complainantType' in (body as any);
+
+  if (isNested) {
+    const b: any = body;
+    const pl = b.plaignant ?? {};
+    const def = b.defendeur ?? {};
+    const pld = b.plainteDetails ?? b.plainte ?? {};
+
+    const PlaignantTypePersonne = b.complainantType === 'individual' ? 'P' : 'M';
 
     return {
-        PlaignantTypePersonne: legacy.PlaignantTypePersonne,
-        PlaignantNom: legacy.PlaignantNom,
-        PlaignantPrenom: legacy.PlaignantPrenom,
-        PlaignantCIN: legacy.PlaignantCIN,
-        PlaignantIdPays: legacy.PlaignantIdPays,
-        PlaignantIdVille: legacy.PlaignantIdVille,
-        PlaignantIdSituationResidence: legacy.PlaignantIdSituationResidence,
-        PlaignantIdProfession: legacy.PlaignantIdProfession,
-        PlaignantSexe: legacy.PlaignantSexe,
-        PlaignantAdresse: legacy.PlaignantAdresse,
-        PlaignantTelephone: legacy.PlaignantTelephone,
-        PlaignantEmail: legacy.PlaignantEmail,
-        PlaignantNomCommercial: legacy.PlaignantNomCommercial,
-        PlaignantNumeroRC: legacy.PlaignantNumeroRC,
+      /* ─── PLAIGNANT (P/M) ─── */
+      PlaignantTypePersonne,
+      PlaignantNom: pl.nom ?? null,
+      PlaignantPrenom: pl.prenom ?? null,
+      PlaignantCIN: pl.cin ?? null,
 
-        DefendeurTypePersonne: legacy.DefendeurTypePersonne,
-        DefendeurNom: legacy.DefendeurNom,
-        DefendeurNomCommercial: legacy.DefendeurNomCommercial,
+      // accept both nomCommercial (frontend) and raisonSociale (older)
+      PlaignantNomCommercial: pl.nomCommercial ?? pl.raisonSociale ?? null,
+      PlaignantNumeroRC: pl.numeroRC ?? null,
 
-        IdObjetInjustice: legacy.IdObjetInjustice,
-        IdJuridiction: legacy.IdJuridiction,
-        ResumePlainte: legacy.ResumePlainte,
+      PlaignantIdPays: pl.idPays,
+      PlaignantIdVille: pl.idVille,
+      PlaignantIdSituationResidence: pl.idSituationResidence ?? null,
+      PlaignantIdProfession: pl.idProfession ?? null,
+      PlaignantSexe: pl.sexe ?? null,
+      PlaignantAdresse: pl.adresse ?? null,
+      PlaignantTelephone: pl.telephone ?? b.phoneToVerify ?? null,
+      PlaignantEmail: pl.email ?? null,
 
-        SessionId: legacy.SessionId,
-        PhoneToVerify: legacy.PhoneToVerify,
-    };
-}
+      // accept both nomRepresentantLegal (older) and representantLegal (frontend)
+      PlaignantSiegeSocial: pl.siegeSocial ?? null,
+      PlaignantNomRepresentantLegal: pl.nomRepresentantLegal ?? pl.representantLegal ?? null,
 
-/* -------------------------------------------------------------------------- */
-/*  Controller                                                                */
-/* -------------------------------------------------------------------------- */
+      /* ─── DÉFENDEUR (flat or nested) ─── */
+      DefendeurTypePersonne: def.type,
+      DefendeurNom:
+        def.personnePhysique?.nom ??
+        def.nom ??
+        null,
+      DefendeurNomCommercial:
+        def.personneMorale?.raisonSociale ??
+        def.nomCommercial ??
+        null,
+      DefendeurNumeroRC:
+        def.personneMorale?.numeroRC ??
+        def.numeroRC ??
+        null,
 
-export async function createComplaintHandler(
-    req: Request<{}, {}, CreateComplaintInput>,
-    res: Response,
-    next: NextFunction,
-): Promise<void> {
-    try {
-        const params = mapBodyToParams(req.body, req.headers['x-session-id'] as string | undefined);
+      /* ─── PLAINTE ─── */
+      IdObjetInjustice: pld.idObjetInjustice,
+      IdJuridiction: pld.idJuridiction,
+      ResumePlainte: pld.resume,
 
-        const [result] = await createComplaintInDB(params);
+      /* ─── MISC ─── */
+      SessionId: b.sessionId ?? 'session-from-api',
+    } as const;
+  }
 
-        res.status(201).json({
-            message: 'Complaint created',
-            complaintId: result.IdPlainte.toString(),
-            trackingCode: result.TrackingCode,
-        });
-    } catch (err) {
-        console.error('Error creating complaint', err);
-        next(err);
-    }
+  // legacy flat shape already matches the SP
+  return body as any;
 }
