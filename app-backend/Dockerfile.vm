@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1
+FROM node:20-slim
+
+# Prisma needs OpenSSL/CA
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Install deps first for better caching
+COPY package*.json ./
+COPY prisma ./prisma/
+RUN npm ci
+RUN npx prisma generate
+
+# App source
+COPY . .
+
+# Ensure uploads path exists
+RUN mkdir -p /app/uploads
+
+EXPOSE 3000
+# For VM testing you can keep dev or switch to start; compose will override if needed
+CMD ["npm","run","start"]
