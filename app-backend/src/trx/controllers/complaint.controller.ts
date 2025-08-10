@@ -1,143 +1,91 @@
-// file: app-backend/src/trx/controllers/complaint.controller.ts
-import { Request, Response, NextFunction } from 'express';
-import { CreateComplaintInput } from '../schemas/complaint.schema';
-import { createComplaintInDB, CreateComplaintParams } from '../services/complaint.service';
+import type { Request, Response } from 'express';
+import { createComplaintInDB } from '../services/complaint.service';
+import type { CreateComplaintBody } from '../schemas/complaint.schema';
 
-/** Map 'individual' | 'legal' → 'P' | 'M' */
-const toTypePersonne = (k: 'individual' | 'legal'): 'P' | 'M' =>
-  k === 'legal' ? 'M' : 'P';
+export const createComplaintHandler = async (req: Request, res: Response) => {
+  const body = req.body as CreateComplaintBody;
+  const params = mapBodyToSpParams(body);
 
-/**
- * We extend service params locally so we can pass the two new fields required
- * for a legal complainant (Step 1): SiegeSocial (mapped to EnseigneSociale in DB)
- * and NomRepresentantLegal. Make sure these are also added to the service layer
- * and forwarded to the stored procedure.
- */
-type AugmentedParams = CreateComplaintParams & {
-  PlaignantSiegeSocial: string | null;
-  PlaignantNomRepresentantLegal: string | null;
+  try {
+    const rows: any = await createComplaintInDB(params);
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    const complaintIdRaw = row?.IdPlainte ?? row?.complaintId;
+    const trackingCode = row?.TrackingCode ?? row?.trackingCode;
+
+    if (complaintIdRaw == null || !trackingCode) {
+      return res.status(500).json({ error: 'Stored procedure returned no data' });
+    }
+
+    return res.status(201).json({
+      complaintId: complaintIdRaw.toString(),
+      trackingCode,
+    });
+  } catch (err: any) {
+    console.error({ err }, 'createComplaint failed');
+    return res.status(500).json({ error: 'Failed to create complaint' });
+  }
 };
 
-function mapBodyToParams(
-  body: CreateComplaintInput,
-  sessionIdHeader?: string,
-): AugmentedParams {
-  // ── nested (mobile) payload ────────────────────────────────────────────
-  if ('plaignant' in body) {
-    const { complainantType, plaignant, defendeur, plainteDetails, phoneToVerify } =
-      body;
+function mapBodyToSpParams(body: CreateComplaintBody) {
+  const isNested = 'complainantType' in (body as any);
 
-    const typePers = toTypePersonne(complainantType);
-    const isLegal = typePers === 'M';
+  if (isNested) {
+    const b: any = body;
+    const pl = b.plaignant ?? {};
+    const def = b.defendeur ?? {};
+    const pld = b.plainteDetails ?? b.plainte ?? {};
 
-    const params: AugmentedParams = {
-      /* plaignant ------------------------------------------------------- */
-      PlaignantTypePersonne: typePers,
-      PlaignantNom: isLegal ? null : plaignant.nom ?? null,
-      PlaignantPrenom: isLegal ? null : plaignant.prenom ?? '-',
-      PlaignantCIN: isLegal ? null : plaignant.cin ?? null,
+    const PlaignantTypePersonne = b.complainantType === 'individual' ? 'P' : 'M';
 
-      PlaignantIdPays: plaignant.idPays,
-      PlaignantIdVille: plaignant.idVille,
-      PlaignantIdSituationResidence: plaignant.idSituationResidence,
-      PlaignantIdProfession: plaignant.idProfession,
-      PlaignantSexe: plaignant.sexe ?? null,
-      PlaignantAdresse: plaignant.adresse ?? null,
-      PlaignantTelephone: plaignant.telephone ?? null,
-      PlaignantEmail: plaignant.email ?? null,
+    return {
+      /* ─── PLAIGNANT (P/M) ─── */
+      PlaignantTypePersonne,
+      PlaignantNom: pl.nom ?? null,
+      PlaignantPrenom: pl.prenom ?? null,
+      PlaignantCIN: pl.cin ?? null,
 
-      // Step 1 (legal complainant): required → nomCommercial, siegeSocial, representantLegal
-      PlaignantNomCommercial: isLegal ? plaignant.nomCommercial! : null,
-      PlaignantNumeroRC: isLegal ? plaignant.numeroRC ?? null : null, // RC optional
-      PlaignantSiegeSocial: isLegal ? plaignant.siegeSocial! : null,
-      PlaignantNomRepresentantLegal: isLegal ? plaignant.representantLegal! : null,
+      // accept both nomCommercial (frontend) and raisonSociale (older)
+      PlaignantNomCommercial: pl.nomCommercial ?? pl.raisonSociale ?? null,
+      PlaignantNumeroRC: pl.numeroRC ?? null,
 
-      /* défendeur ------------------------------------------------------- */
-      // Step 2 (legal defendant): required → nomCommercial only; RC optional
-      DefendeurTypePersonne: defendeur.type,
-      DefendeurNom: defendeur.nom ?? null,
-      DefendeurNomCommercial: defendeur.nomCommercial ?? null,
-      DefendeurNumeroRC: defendeur.type === 'M' ? defendeur.numeroRC ?? null : null,
+      PlaignantIdPays: pl.idPays,
+      PlaignantIdVille: pl.idVille,
+      PlaignantIdSituationResidence: pl.idSituationResidence ?? null,
+      PlaignantIdProfession: pl.idProfession ?? null,
+      PlaignantSexe: pl.sexe ?? null,
+      PlaignantAdresse: pl.adresse ?? null,
+      PlaignantTelephone: pl.telephone ?? b.phoneToVerify ?? null,
+      PlaignantEmail: pl.email ?? null,
 
-      /* plainte --------------------------------------------------------- */
-      IdObjetInjustice: plainteDetails.idObjetInjustice,
-      IdJuridiction: plainteDetails.idJuridiction,
-      ResumePlainte: plainteDetails.resume,
+      // accept both nomRepresentantLegal (older) and representantLegal (frontend)
+      PlaignantSiegeSocial: pl.siegeSocial ?? null,
+      PlaignantNomRepresentantLegal: pl.nomRepresentantLegal ?? pl.representantLegal ?? null,
 
-      /* misc ------------------------------------------------------------ */
-      SessionId: sessionIdHeader ?? '',
-      PhoneToVerify: phoneToVerify,
-    };
+      /* ─── DÉFENDEUR (flat or nested) ─── */
+      DefendeurTypePersonne: def.type,
+      DefendeurNom:
+        def.personnePhysique?.nom ??
+        def.nom ??
+        null,
+      DefendeurNomCommercial:
+        def.personneMorale?.raisonSociale ??
+        def.nomCommercial ??
+        null,
+      DefendeurNumeroRC:
+        def.personneMorale?.numeroRC ??
+        def.numeroRC ??
+        null,
 
-    return params;
+      /* ─── PLAINTE ─── */
+      IdObjetInjustice: pld.idObjetInjustice,
+      IdJuridiction: pld.idJuridiction,
+      ResumePlainte: pld.resume,
+
+      /* ─── MISC ─── */
+      SessionId: b.sessionId ?? 'session-from-api',
+    } as const;
   }
 
-  // ── legacy flat payload ────────────────────────────────────────────────
-  const p: any = body;
-  const params: AugmentedParams = {
-    PlaignantTypePersonne: p.PlaignantTypePersonne,
-    PlaignantNom: p.PlaignantNom,
-    PlaignantPrenom: p.PlaignantPrenom || '-',
-    PlaignantCIN: p.PlaignantCIN,
-    PlaignantIdPays: p.PlaignantIdPays,
-    PlaignantIdVille: p.PlaignantIdVille,
-    PlaignantIdSituationResidence: p.PlaignantIdSituationResidence,
-    PlaignantIdProfession: p.PlaignantIdProfession,
-    PlaignantSexe: p.PlaignantSexe ?? null,
-    PlaignantAdresse: p.PlaignantAdresse,
-    PlaignantTelephone: p.PlaignantTelephone,
-    PlaignantEmail: p.PlaignantEmail,
-
-    // Legal complainant fields (RC optional)
-    PlaignantNomCommercial: p.PlaignantNomCommercial ?? null,
-    PlaignantNumeroRC: p.PlaignantNumeroRC ?? null,
-    PlaignantSiegeSocial: p.PlaignantSiegeSocial ?? null,
-    PlaignantNomRepresentantLegal: p.PlaignantNomRepresentantLegal ?? null,
-
-    // Legal defendant: require only NomCommercial; RC optional
-    DefendeurTypePersonne: p.DefendeurTypePersonne,
-    DefendeurNom: p.DefendeurNom ?? null,
-    DefendeurNomCommercial: p.DefendeurNomCommercial ?? null,
-    DefendeurNumeroRC: p.DefendeurNumeroRC ?? null,
-
-    IdObjetInjustice: p.IdObjetInjustice,
-    IdJuridiction: p.IdJuridiction,
-    ResumePlainte: p.ResumePlainte,
-
-    SessionId: p.SessionId ?? '',
-    PhoneToVerify: p.PhoneToVerify ?? '',
-  };
-
-  return params;
-}
-
-export async function createComplaintHandler(
-  req: Request<{}, {}, CreateComplaintInput>,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  try {
-    const params = mapBodyToParams(
-      req.body,
-      req.headers['x-session-id'] as string | undefined,
-    );
-
-    // NOTE:
-    // - Ensure CreateComplaintParams (service layer) includes:
-    //     PlaignantSiegeSocial: string | null
-    //     PlaignantNomRepresentantLegal: string | null
-    // - And forward both to the stored procedure parameters.
-    const [result] = await createComplaintInDB(
-      params as unknown as CreateComplaintParams,
-    );
-
-    res.status(201).json({
-      message: 'Complaint created',
-      complaintId: result.IdPlainte.toString(),
-      trackingCode: result.TrackingCode,
-    });
-  } catch (err) {
-    console.error('Error creating complaint', err);
-    next(err);
-  }
+  // legacy flat shape already matches the SP
+  return body as any;
 }

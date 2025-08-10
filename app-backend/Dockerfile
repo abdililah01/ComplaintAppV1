@@ -1,3 +1,4 @@
+# app-backend Dockerfile
 # 1. Base image
 FROM node:18-slim
 
