@@ -28,6 +28,9 @@ import { useSubmitComplaint } from '../hooks/useSubmitComplaint';
 const DEFAULT_PROF_ID = 1;       // "غير محدد"
 const DEFAULT_RESIDENCE_ID = 1;  // "مغربي"
 
+const MAX_MB = 2;
+const ALLOWED = new Set(['application/pdf', 'image/jpeg']);
+
 const colors = {
   background: '#f8fafc',
   white: '#FFFFFF',
@@ -346,18 +349,59 @@ const Step3_ComplaintDetails = ({ onFieldChange, formData, onInputFocus, inputRe
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: true,
+        type: ['application/pdf', 'image/*'], // we’ll still filter to JPEG below
         multiple: true,
+        copyToCacheDirectory: true,
       });
-      if (!result.canceled && result.assets) {
-        const newFiles = result.assets.map((a) => ({ uri: a.uri, name: a.name, size: a.size, type: a.mimeType }));
-        onFieldChange('attachments', [...(formData.attachments || []), ...newFiles]);
+      if (result.canceled || !result.assets) return;
+
+      const current = formData.attachments || [];
+      const roomLeft = Math.max(0, 5 - current.length);
+      if (roomLeft === 0) {
+        Alert.alert('حدّ المرفقات', 'يمكنك إرفاق 5 ملفات كحد أقصى.');
+        return;
+      }
+
+      const picked = result.assets.slice(0, roomLeft);
+      const accepted = [];
+      const rejected = [];
+
+      for (const a of picked) {
+        const type = a.mimeType || '';
+        const sizeMB = (a.size || 0) / (1024 * 1024);
+        const isPdf = type === 'application/pdf';
+        const isJpeg = type === 'image/jpeg' || /\.jpe?g$/i.test(a.name || '');
+
+        if (!(isPdf || isJpeg) || !ALLOWED.has(isPdf ? 'application/pdf' : 'image/jpeg')) {
+          rejected.push(`${a.name} (نوع غير مسموح)`);
+          continue;
+        }
+        if (sizeMB > MAX_MB) {
+          rejected.push(`${a.name} (> ${MAX_MB}MB)`);
+          continue;
+        }
+        accepted.push({
+          uri: a.uri,
+          name: a.name || (isPdf ? 'file.pdf' : 'photo.jpg'),
+          size: a.size,
+          type: isPdf ? 'application/pdf' : 'image/jpeg',
+        });
+      }
+
+      if (rejected.length) {
+        Alert.alert(
+          'المرفقات',
+          `تم رفض:\n- ${rejected.join('\n- ')}\n\nالمسموح: PDF أو JPEG، الحجم ≤ ${MAX_MB}MB، حتى 5 ملفات.`,
+        );
+      }
+      if (accepted.length) {
+        onFieldChange('attachments', [...current, ...accepted]);
       }
     } catch {
       Alert.alert('خطأ', 'فشل في اختيار المرفقات');
     }
   };
+
   const removeAttachment = (i) =>
     onFieldChange('attachments', formData.attachments.filter((_, idx) => idx !== i));
   const formatSize = (b) => (b < 1024 ? `${b} B` : `${(b / 1024).toFixed(1)} KB`);
@@ -394,7 +438,7 @@ const Step3_ComplaintDetails = ({ onFieldChange, formData, onInputFocus, inputRe
         ))}
 
         <Text style={styles.attachmentInstructions}>
-          يمكنك إرفاق الوثائق المساعدة (PDF, Word, صور) - حجم أقصى 5MB لكل ملف
+          المسموح: PDF أو JPEG فقط — الحجم الأقصى 2MB لكل ملف — حتى 5 ملفات
         </Text>
       </View>
     </View>

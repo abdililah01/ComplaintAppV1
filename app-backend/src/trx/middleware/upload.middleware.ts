@@ -1,80 +1,125 @@
+// app-backend/src/trx/middlewares/upload.middleware.ts
 import multer, { FileFilterCallback } from 'multer';
 import { Request, Response, NextFunction } from 'express';
-import { extname } from 'path';
-import { scanBuffer } from '../services/clamav.service';
 import sharp from 'sharp';
+import crypto from 'crypto';
+import { scanBufferDetailed } from '../services/clamav.service';
 
-/* -------- Lazy ESM loader for file-type --------------------------------- */
+/** ---- Lazy ESM loader for file-type (works with TS/ESM/CommonJS builds) ---- */
 type FileTypeResult = import('file-type').FileTypeResult;
 let fileTypeFromBuffer: (b: Buffer) => Promise<FileTypeResult | undefined>;
 
 async function ensureFileType(): Promise<void> {
   if (!fileTypeFromBuffer) {
     const mod = await import('file-type');
+    // handle both modern and legacy exports
     fileTypeFromBuffer =
-        (mod as any).fileTypeFromBuffer ?? (mod as any).fromBuffer;
+      (mod as any).fileTypeFromBuffer ?? (mod as any).fromBuffer;
   }
 }
-/* ------------------------------------------------------------------------ */
+/** ------------------------------------------------------------------------- */
 
 export interface ProcessedFile {
-  filename: string;
-  buffer: Buffer;
-  mimetype: string;
+  filename: string;   // safe randomized filename with correct extension
+  buffer: Buffer;     // final processed bytes (after AV + normalization)
+  mimetype: string;   // detected MIME from magic bytes (authoritative)
 }
 
-const ALLOWED_MIMES = ['image/jpeg', 'image/jpg', 'application/pdf'];
+export const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+export const MAX_FILES = 5;
+const ALLOWED_MIME = new Set(['image/jpeg', 'application/pdf']);
 
-/* -------------------- Multer config ------------------------------------- */
+function extForMime(mime: string): '.jpg' | '.pdf' {
+  return mime === 'image/jpeg' ? '.jpg' : '.pdf';
+}
+
+/** -------------------- Multer (memory) config ----------------------------- */
 export const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 2 * 1024 * 1024, files: 5 },
+  limits: { fileSize: MAX_FILE_SIZE, files: MAX_FILES },
   fileFilter: (_req, file, cb: FileFilterCallback) => {
-    if (ALLOWED_MIMES.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Unsupported file type'));
+    // Hint for clients; real enforcement is via magic bytes below
+    if (ALLOWED_MIME.has(file.mimetype)) cb(null, true);
+    else cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
   },
 });
+/** ------------------------------------------------------------------------- */
 
-/* ---------------- Post-upload pipeline ---------------------------------- */
+/**
+ * Validate and process uploaded files:
+ * - Strict magic-byte type check (PDF/JPEG only)
+ * - Real AV scan via clamd with detailed status (CLEAN | FOUND | ERROR)
+ * - JPEG normalization (autorotate, strip metadata, re-encode)
+ * - Safe randomized filename with correct extension
+ * Produces req.processedFiles for the controller layer to persist.
+ */
 export async function validateAndProcessUploads(
-    req: Request,
-    res: Response,
-    next: NextFunction,
+  req: Request,
+  res: Response,
+  next: NextFunction,
 ): Promise<void> {
-  const files = req.files as Express.Multer.File[] | undefined;
-  if (!files?.length) return next();
-
-  const processed: ProcessedFile[] = [];
-
-  await ensureFileType();
-
-  for (const file of files) {
-    /* 1 — magic-byte verification */
-    const detected = await fileTypeFromBuffer(file.buffer);
-    if (!detected || !ALLOWED_MIMES.includes(detected.mime)) {
-      res.status(415).json({ error: `File signature mismatch: ${file.originalname}` }); // FIX
-      return;                                                                           // FIX
+  try {
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (!files?.length) {
+      res.status(400).json({ error: 'NO_FILES' });
+      return;
     }
 
-    /* 2 — ClamAV */
-    if (!(await scanBuffer(file.buffer))) {
-      res.status(415).json({ error: `Malware detected in ${file.originalname}` });      // FIX
-      return;                                                                           // FIX
+    await ensureFileType();
+
+    const processed: ProcessedFile[] = [];
+
+    for (const file of files) {
+      // 1) Strict magic-byte detection
+      const ft = await fileTypeFromBuffer(file.buffer);
+      if (!ft || !ALLOWED_MIME.has(ft.mime)) {
+        res.status(415).json({
+          error: 'UNSUPPORTED_FILE_TYPE',
+          file: file.originalname,
+        });
+        return;
+      }
+
+      // 2) Antivirus scan with detailed result
+      const av = await scanBufferDetailed(file.buffer);
+      if (av.status === 'FOUND') {
+        res.status(415).json({
+          error: 'MALWARE_DETECTED',
+          file: file.originalname,
+        });
+        return;
+      }
+      if (av.status === 'ERROR') {
+        // Clamd not reachable / protocol issue — surface as service unavailable
+        res.status(503).json({
+          error: 'AV_UNAVAILABLE',
+          details: av.reason || av.raw || '',
+        });
+        return;
+      }
+
+      // 3) JPEG normalization (autorotate + strip metadata)
+      let outBuffer = file.buffer;
+      if (ft.mime === 'image/jpeg') {
+        outBuffer = await sharp(outBuffer).rotate().jpeg({ quality: 90 }).toBuffer();
+      }
+
+      // 4) Safe randomized filename with correct extension
+      const id = typeof (crypto as any).randomUUID === 'function'
+        ? (crypto as any).randomUUID()
+        : crypto.randomBytes(8).toString('hex');
+      const safeName = `${Date.now()}-${id}${extForMime(ft.mime)}`;
+
+      processed.push({
+        filename: safeName,
+        buffer: outBuffer,
+        mimetype: ft.mime,
+      });
     }
 
-    /* 3 — strip EXIF / auto-rotate */
-    let buffer = file.buffer;
-    if (file.mimetype.startsWith('image/')) {
-      buffer = await sharp(buffer).rotate().toBuffer();
-    }
-
-    /* 4 — safe filename */
-    const filename =
-        `${Date.now()}-${Math.random().toString(36).slice(2)}${extname(file.originalname)}`;
-
-    processed.push({ filename, buffer, mimetype: file.mimetype });
+    (req as Request & { processedFiles: ProcessedFile[] }).processedFiles = processed;
+    next();
+  } catch (err) {
+    next(err);
   }
-
-  (req as Request & { processedFiles: ProcessedFile[] }).processedFiles = processed;
-  next();
 }
