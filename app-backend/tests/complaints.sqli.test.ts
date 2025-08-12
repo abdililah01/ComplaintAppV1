@@ -1,4 +1,4 @@
-// app-backend/src/trx/__tests__/complaints.sqli.spec.ts
+// app-backend/src/tests/complaints.sqli.test.ts
 import request from 'supertest';
 import app from '../src/trx/app'; // your app export
 
