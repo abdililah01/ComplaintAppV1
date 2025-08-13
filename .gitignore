@@ -18,19 +18,50 @@ Thumbs.db
 # Fichiers Sensibles (Secrets)
 # ===================================================================
 # Fichiers d'environnement - NE JAMAIS LES COMMITTER
+# (couvre tous les .env à tous les niveaux du repo)
 .env
-.env.*.local
+.env.*
 .env.local
-# Couvre également le .env du backend
+.env.*.local
+**/.env
+**/.env.*
+**/.env.local
+**/.env.*.local
+
+# Couvre également le .env du backend explicitement (par sécurité)
 app-backend/.env
+
+# Direnv / dotenv divers
+.envrc
+dotenv*
+*.env.example.local  # gardez vos exemples sans secrets
+
+# Keystores / certificats / clés privées (Android, iOS, TLS)
+*.keystore
+*.keystore.*
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+*.cer
+*.b64
+release.keystore
+release.keystore.b64
+mon-app-frontend/release.keystore*
+mon-app-frontend/*.jks
+
+# Fichiers de config mobiles susceptibles de contenir des secrets
+google-services.json
+GoogleService-Info.plist
 
 # ===================================================================
 # Dépendances Node.js (communes au frontend et au backend)
 # ===================================================================
-# Le dossier contenant tous les paquets installés
 node_modules/
 
-# Fichiers de log NPM
+# Fichiers de log NPM/Yarn/PNPM
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -52,22 +83,41 @@ app-backend/logs/
 # Rapports de couverture de test générés par Jest
 app-backend/coverage/
 
-# Fichiers de base de données SQLite générés par Prisma (si vous l'utilisez en dev)
+# Fichiers de base de données SQLite générés par Prisma (si utilisés en dev)
 app-backend/prisma/*.db*
+app-backend/prisma/*.db-journal
 
 # ===================================================================
 # Fichiers Spécifiques au Frontend (mon-app-frontend avec Expo)
 # ===================================================================
 mon-app-frontend/.expo/
+mon-app-frontend/.expo-shared/
 mon-app-frontend/node_modules/
 mon-app-frontend/dist/
 mon-app-frontend/web-build/
 
+# (si vous faites un prebuild) dossiers natifs générés
+mon-app-frontend/android/
+mon-app-frontend/ios/
+
 # Fichiers de configuration Expo spécifiques à l'utilisateur
+# (gardez-les ignorés s’ils contiennent des infos sensibles)
 mon-app-frontend/eas.json
 
-# Logs de crash Metro Bundler
+# Logs / caches Metro Bundler
 mon-app-frontend/metro-bundler-cache-*
+mon-app-frontend/.cache/
+
+# Configs d’app contenant potentiellement des variables (selon votre setup)
 mon-app-frontend/app.config.ts
 mon-app-frontend/app.config.js
 mon-app-frontend/app.json
+
+# ===================================================================
+# Divers / temporaires
+# ===================================================================
+tmp/
+temp/
+*.tmp
+*.log
+coverage/

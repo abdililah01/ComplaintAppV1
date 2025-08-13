@@ -1,8 +1,8 @@
+// babel.config.js
 module.exports = function (api) {
   api.cache(true);
 
-  const envFile =
-    process.env.APP_ENV === 'staging' ? '.env.staging' : '.env.local';
+  const envFile = process.env.APP_ENV === 'staging' ? '.env.staging' : '.env.local';
 
   return {
     presets: ['babel-preset-expo'],
@@ -20,9 +20,7 @@ module.exports = function (api) {
         'module-resolver',
         {
           root: ['./src'],
-          alias: {
-            '@': './src',          // ← this line makes `@/…` work
-          },
+          alias: { '@': './src' },
           extensions: [
             '.ios.js',
             '.android.js',
@@ -34,6 +32,9 @@ module.exports = function (api) {
           ],
         },
       ],
+
+      // MUST be last for Reanimated to work
+      'react-native-reanimated/plugin',
     ],
   };
 };

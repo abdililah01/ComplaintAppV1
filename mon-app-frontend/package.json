@@ -18,6 +18,7 @@
     "build:ios": "npm run bundle:ios && npm run obfuscate:ios"
   },
   "dependencies": {
+    "@expo/vector-icons": "^14.1.0",
     "@react-native-picker/picker": "^2.11.1",
     "@react-navigation/native": "^7.1.14",
     "@react-navigation/native-stack": "^7.3.21",
@@ -25,14 +26,18 @@
     "axios": "^1.11.0",
     "expo": "~53.0.17",
     "expo-document-picker": "~13.1.6",
+    "expo-linear-gradient": "~14.1.5",
     "expo-splash-screen": "~0.30.10",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-hook-form": "^7.61.1",
     "react-native": "0.79.5",
+    "react-native-gesture-handler": "~2.24.0",
     "react-native-get-random-values": "^1.11.0",
+    "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
+    "tslib": "^2.8.1",
     "zod": "^4.0.14"
   },
   "devDependencies": {

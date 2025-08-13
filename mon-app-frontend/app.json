@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "mon-app-frontend",
@@ -7,31 +6,27 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-
     "plugins": [
       [
         "expo-splash-screen",
         {
           "image": "./assets/new-splash.png",
-          "resizeMode": "cover",
+          "resizeMode": "contain",
           "backgroundColor": "#FFFFFF",
-          "enableFullScreenImage_legacy": true,
-          "imageWidth": 300,
-          "imageHeight": 300,
           "dark": {
             "image": "./assets/new-splash.png",
-            "backgroundColor": "#FFFFFF",
-            "resizeMode": "cover",
-            "enableFullScreenImage_legacy": true,
-            "imageWidth": 300,
-            "imageHeight": 300
+            "resizeMode": "contain",
+            "backgroundColor": "#FFFFFF"
           }
         }
       ]
     ],
-
+    "splash": {
+      "image": "./assets/new-splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
     "assetBundlePatterns": ["**/*"],
-
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.egawilldoit.monappfrontend"

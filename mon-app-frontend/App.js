@@ -1,4 +1,7 @@
 // mon-app-frontend/App.js
+
+import 'react-native-gesture-handler'; // keep this first
+import 'react-native-reanimated';
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -6,7 +9,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-// IMPORTANT: Import trxApi early to trigger the debug logs
+
+// Import TRX API early to trigger debug logs
 import { trxApi } from './src/api/trx';
 
 // Screens
@@ -15,74 +19,69 @@ import ComplaintFormScreen from './src/screens/ComplaintFormScreen';
 import TrackComplaintScreen from './src/screens/TrackComplaintScreen';
 import AnimatedSplash from './src/screens/AnimatedSplash';
 
-// Prevent auto-hide of the native splash screen
+// keep native splash visible until we say otherwise
 SplashScreen.preventAutoHideAsync();
 
 const Stack = createNativeStackNavigator();
 
-// Configure React-Query client with no retry on queries
+// React Query client
 const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-    },
-  },
+  defaultOptions: { queries: { retry: false } },
 });
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
   const [animDone, setAnimDone] = useState(false);
 
-  // Health check effect - runs once when app loads
+  // Health check (runs once)
   useEffect(() => {
-    console.log('🚀 App component mounted, running TRX health check...');
-    
+    console.log('🚀 App mounted, running TRX /healthz ...');
     trxApi
       .get('/healthz')
       .then(res => {
-        console.log('🏥 TRX /healthz SUCCESS:', res.data);
-        console.log('📡 Response status:', res.status);
-        console.log('🔗 Used baseURL:', trxApi.defaults.baseURL);
+        console.log('🏥 TRX /healthz OK:', res.data);
+        console.log('📡 Status:', res.status);
+        console.log('🔗 baseURL:', trxApi.defaults.baseURL);
       })
       .catch(err => {
         console.error('❌ TRX health-check FAILED:', err.message);
         if (err.response) {
-          console.error('📤 Response status:', err.response.status);
-          console.error('📤 Response data:', err.response.data);
+          console.error('📤 Status:', err.response.status);
+          console.error('📤 Data:', err.response.data);
         } else if (err.request) {
-          console.error('📡 No response received - network issue?');
-          console.error('🔗 Attempted URL:', trxApi.defaults.baseURL + '/healthz');
+          console.error('📡 No response. Tried:', trxApi.defaults.baseURL + '/healthz');
         }
       });
   }, []);
 
-  // Simulate preloading (fonts, secure storage, etc.)
+  // Simulate preloading (fonts/assets/secure storage/etc.)
   useEffect(() => {
     (async () => {
-      console.log('⏳ Simulating app initialization...');
-      await new Promise((res) => setTimeout(res, 2000));
-      console.log('✅ App initialization complete');
+      console.log('⏳ Initializing app ...');
+      // TODO: preload fonts/assets here if needed
+      await new Promise(res => setTimeout(res, 1200));
+      console.log('✅ Initialization done');
       setAppIsReady(true);
     })();
   }, []);
 
-  // Hide native splash once the root view layout is done
+  // Hide native splash once root view laid out (and only after appIsReady)
   const onLayoutRootView = useCallback(async () => {
     if (appIsReady) {
-      console.log('🎬 Hiding native splash screen');
+      console.log('🎬 Hiding native splash');
       await SplashScreen.hideAsync();
     }
   }, [appIsReady]);
 
-  // While loading, keep native splash
+  // While loading, keep native splash visible by returning null
   if (!appIsReady) {
-    console.log('⌛ App not ready yet, showing native splash');
+    console.log('⌛ App not ready yet: showing native splash');
     return null;
   }
 
-  // Show animated splash once
+  // Show animated splash once after readiness
   if (!animDone) {
-    console.log('🎨 Showing animated splash screen');
+    console.log('🎨 Showing animated splash overlay');
     return <AnimatedSplash onEnd={() => setAnimDone(true)} />;
   }
 
