@@ -1,6 +1,7 @@
 name: Android CI (Release Build)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - develop
@@ -10,71 +11,121 @@ on:
       - develop
 
 jobs:
-  android-build:
+  android-release:
     runs-on: ubuntu-latest
     env:
-      # Make sure you’ve added API_BASE_URL in your repo’s Secrets
-      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      # -- Required repo secrets --
+      # see: Repo > Settings > Secrets and variables > Actions
+      TRX_RELEASE_BASE_URL: ${{ secrets.TRX_RELEASE_BASE_URL }}
+      LOOKUP_RELEASE_BASE_URL: ${{ secrets.LOOKUP_RELEASE_BASE_URL }}
+      ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
     steps:
-      # 1. Check out your code
+      # 1) Checkout
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2. Generate .env with the API base URL
-      - name: Create .env file
-        working-directory: mon-app-frontend
-        run: echo "API_BASE_URL=${API_BASE_URL}" > .env
-
-      # 3. Setup Node.js
+      # 2) Node
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      # 4. Install JS dependencies in the frontend folder
+      # 3) Install JS deps
       - name: Install frontend dependencies
         working-directory: mon-app-frontend
         run: npm ci
 
-      # 5. Kill any leftover Gradle daemons (clean build)
-      - name: Kill Gradle daemons
-        working-directory: mon-app-frontend/android
-        run: ./gradlew --stop
+      # 4) Write .env for Expo (public vars baked into bundle)
+      - name: Create .env (Expo public vars)
+        working-directory: mon-app-frontend
+        shell: bash
+        run: |
+          echo "EXPO_PUBLIC_TRX_API_BASE_URL=${TRX_RELEASE_BASE_URL}" > .env
+          if [ -n "${LOOKUP_RELEASE_BASE_URL}" ]; then
+            echo "EXPO_PUBLIC_LOOKUP_API_BASE_URL=${LOOKUP_RELEASE_BASE_URL}" >> .env
+          fi
+          echo "HTTPS=false" >> .env
+          echo "Wrote .env:" && cat .env
 
-      # 6. Clear the Gradle cache
-      - name: Clear Gradle cache
-        run: rm -rf ~/.gradle/caches
-
-      # 7. Generate native Android project via Expo prebuild
+      # 5) Generate native Android project
       - name: Expo prebuild (android, clean)
         working-directory: mon-app-frontend
         run: npx expo prebuild --platform android --clean
 
-      # 8. Setup Java (JDK 17)
-      - name: Setup Java
-        uses: actions/setup-java@v3
+      # (Optional safety) Ensure cleartext HTTP remains enabled for LAN QA
+      - name: Ensure cleartext HTTP for LAN
+        working-directory: mon-app-frontend
+        shell: bash
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          mkdir -p android/app/src/main/res/xml
+          cat > android/app/src/main/res/xml/network_security_config.xml <<'XML'
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+            <base-config cleartextTrafficPermitted="true" />
+          </network-security-config>
+          XML
+          if ! grep -q 'usesCleartextTraffic="true"' "$MANIFEST"; then
+            sed -i '0,/<application /s//<application android:usesCleartextTraffic="true" /' "$MANIFEST"
+          fi
+          if ! grep -q 'networkSecurityConfig="@xml/network_security_config"' "$MANIFEST"; then
+            sed -i '0,/<application /s//<application android:networkSecurityConfig="@xml\/network_security_config" /' "$MANIFEST"
+          fi
+
+      # 6) Java
+      - name: Setup Java (JDK 17)
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 9. Install Android SDK with exact SDK/NDK versions
+      # 7) Android SDK
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v3
         with:
-          api-level: 35             # compileSdkVersion
-          build-tools: '35.0.0'     # buildToolsVersion
-          ndk: '27.1.12297006'      # ndkVersion
+          api-level: 35
+          build-tools: '35.0.0'
+          ndk: '27.1.12297006'
           cmake: false
 
-      # 10. Assemble the release APK
+      # 8) Decode keystore and expose Gradle envs
+      - name: Decode keystore & set signing env
+        working-directory: mon-app-frontend/android/app
+        shell: bash
+        run: |
+          echo "$ANDROID_KEYSTORE_B64" | base64 -d > release.keystore
+          echo "ANDROID_STORE_FILE=$(pwd)/release.keystore" >> $GITHUB_ENV
+          echo "ANDROID_KEYSTORE_PASSWORD=${ANDROID_KEYSTORE_PASSWORD}" >> $GITHUB_ENV
+          echo "ANDROID_KEY_ALIAS=${ANDROID_KEY_ALIAS}" >> $GITHUB_ENV
+          echo "ANDROID_KEY_PASSWORD=${ANDROID_KEY_PASSWORD}" >> $GITHUB_ENV
+          ls -l release.keystore
+
+      # 9) Clean & build Release (APK + AAB)
+      - name: Gradle clean
+        working-directory: mon-app-frontend/android
+        run: ./gradlew clean --no-daemon
+
       - name: Assemble Release APK
         working-directory: mon-app-frontend/android
         run: ./gradlew assembleRelease --no-daemon
 
-      # 11. Upload the release APK as build artifact
+      - name: Bundle Release AAB
+        working-directory: mon-app-frontend/android
+        run: ./gradlew bundleRelease --no-daemon
+
+      # 10) Upload artifacts
       - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: android-release-apk
           path: mon-app-frontend/android/app/build/outputs/apk/release/app-release.apk
+
+      - name: Upload Release AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aab
+          path: mon-app-frontend/android/app/build/outputs/bundle/release/app-release.aab
