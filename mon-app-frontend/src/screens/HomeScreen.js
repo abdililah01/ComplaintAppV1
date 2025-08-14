@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNetInfo } from '@react-native-community/netinfo';
 import HomeSkeleton from '../components/HomeSkeleton';
 
 // ====================================================================
@@ -27,15 +28,28 @@ const colors = {
   textSecondary: '#718096',
   border: '#e2e8f0',
   cardShadow: '#a0aec0',
+  offlineBg: '#1f2937',     // dark slate
+  offlineText: '#fde68a',   // warm yellow
 };
 
 const HomeScreen = ({ navigation }) => {
-  // Simple demo loading (replace with your React Query isLoading later)
+  const netInfo = useNetInfo();
+  // Offline if either flag is explicitly false
+  const isOffline =
+    netInfo?.isConnected === false || netInfo?.isInternetReachable === false;
+
   const [loading, setLoading] = useState(true);
+
+  // When offline -> force skeleton
+  // When online  -> do a short warm-up then show content
   useEffect(() => {
+    if (isOffline) {
+      setLoading(true);
+      return;
+    }
     const t = setTimeout(() => setLoading(false), 700);
     return () => clearTimeout(t);
-  }, []);
+  }, [isOffline]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -88,6 +102,14 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
       </ImageBackground>
+
+      {/* Offline banner (sticky under header) */}
+      {isOffline && (
+        <View style={styles.offlineBar}>
+          <MaterialIcons name="wifi-off" size={18} color={colors.offlineText} />
+          <Text style={styles.offlineText}>لا يوجد اتصال بالإنترنت</Text>
+        </View>
+      )}
 
       {/* ====== Content area ====== */}
       {loading ? (
@@ -198,7 +220,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(58, 79, 83, 0.35)',
   },
-  // removed web-only CSS gradient; replaced with LinearGradient above
 
   headerContent: {
     flexDirection: 'row',
@@ -208,11 +229,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     paddingVertical: 8,
   },
-  headerTextContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-  },
+  headerTextContainer: { flex: 1, paddingHorizontal: 20, alignItems: 'center' },
   titleContainer: { alignItems: 'center', marginBottom: 6 },
   titleUnderline: {
     width: 60,
@@ -221,7 +238,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     marginTop: 4,
     shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
     elevation: 3,
@@ -271,11 +287,21 @@ const styles = StyleSheet.create({
     borderRadius: 31,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     shadowColor: colors.white,
-    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },
   logo: { width: 45, height: 45, borderRadius: 22.5 },
+
+  // NEW: offline bar
+  offlineBar: {
+    backgroundColor: colors.offlineBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    gap: 8,
+  },
+  offlineText: { color: colors.offlineText, fontWeight: '700', fontSize: 13 },
 
   statsContainer: {
     flexDirection: 'row',
@@ -303,7 +329,6 @@ const styles = StyleSheet.create({
     borderLeftColor: colors.primary,
     elevation: 2,
     shadowColor: colors.cardShadow,
-    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
@@ -319,7 +344,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     elevation: 4,
     shadowColor: colors.cardShadow,
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
