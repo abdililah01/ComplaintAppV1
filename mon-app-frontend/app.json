@@ -13,21 +13,23 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-cover.png",
-          "resizeMode": "cover",
           "backgroundColor": "#F3F6FA",
+          "image": "./assets/splash-logo.png",
+          "resizeMode": "contain",
+          "imageWidth": 360,                       
           "dark": {
-            "image": "./assets/splash-cover.png",
-            "resizeMode": "cover",
-            "backgroundColor": "#0E1116"
+            "backgroundColor": "#0E1116",
+            "image": "./assets/splash-logo.png",
+            "resizeMode": "contain",
+            "imageWidth": 280
           }
         }
       ]
     ],
 
     "splash": {
-      "image": "./assets/splash-cover.png",
-      "resizeMode": "cover",
+      "image": "./assets/splash-logo.png",
+      "resizeMode": "contain",
       "backgroundColor": "#F3F6FA"
     },
 
@@ -46,9 +48,7 @@
       "package": "com.egawilldoit.monappfrontend"
     },
 
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "web": { "favicon": "./assets/favicon.png" },
 
     "extra": {}
   }
