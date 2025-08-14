@@ -16,12 +16,12 @@
           "backgroundColor": "#F3F6FA",
           "image": "./assets/splash-logo.png",
           "resizeMode": "contain",
-          "imageWidth": 360,                       
+          "imageWidth": 400,
           "dark": {
             "backgroundColor": "#0E1116",
             "image": "./assets/splash-logo.png",
             "resizeMode": "contain",
-            "imageWidth": 280
+            "imageWidth": 400
           }
         }
       ]

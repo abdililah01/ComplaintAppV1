@@ -20,7 +20,9 @@ import TrackComplaintScreen from './src/screens/TrackComplaintScreen';
 SplashScreen.preventAutoHideAsync();
 
 const Stack = createNativeStackNavigator();
-const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -30,7 +32,7 @@ export default function App() {
       try {
         console.log('🚀 Initializing...');
         await trxApi.get('/healthz').catch(() => {});
-        // preload anything here if needed
+        // preload anything else here if needed
       } finally {
         setAppIsReady(true);
       }
@@ -59,9 +61,21 @@ export default function App() {
               headerTitleAlign: 'center',
             }}
           >
-            <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="ComplaintForm" component={ComplaintFormScreen} options={{ title: 'وضع شكاية جديدة' }} />
-            <Stack.Screen name="TrackComplaint" component={TrackComplaintScreen} options={{ title: 'تتبع شكاية موجودة' }} />
+            <Stack.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ComplaintForm"
+              component={ComplaintFormScreen}
+              options={{ title: 'وضع شكاية جديدة' }}
+            />
+            <Stack.Screen
+              name="TrackComplaint"
+              component={TrackComplaintScreen}
+              options={{ title: 'تتبع شكاية موجودة' }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </View>
