@@ -1,7 +1,7 @@
 // mon-app-frontend/App.js
-
 import 'react-native-gesture-handler'; // keep this first
 import 'react-native-reanimated';
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -9,17 +9,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-
-// Import TRX API early to trigger debug logs
+// Import TRX API early to trigger the debug logs
 import { trxApi } from './src/api/trx';
 
 // Screens
 import HomeScreen from './src/screens/HomeScreen';
 import ComplaintFormScreen from './src/screens/ComplaintFormScreen';
 import TrackComplaintScreen from './src/screens/TrackComplaintScreen';
-import AnimatedSplash from './src/screens/AnimatedSplash';
 
-// keep native splash visible until we say otherwise
+// Keep native splash visible until we say otherwise
 SplashScreen.preventAutoHideAsync();
 
 const Stack = createNativeStackNavigator();
@@ -31,7 +29,6 @@ const queryClient = new QueryClient({
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
-  const [animDone, setAnimDone] = useState(false);
 
   // Health check (runs once)
   useEffect(() => {
@@ -59,13 +56,13 @@ export default function App() {
     (async () => {
       console.log('⏳ Initializing app ...');
       // TODO: preload fonts/assets here if needed
-      await new Promise(res => setTimeout(res, 1200));
+      await new Promise(res => setTimeout(res, 800));
       console.log('✅ Initialization done');
       setAppIsReady(true);
     })();
   }, []);
 
-  // Hide native splash once root view laid out (and only after appIsReady)
+  // Hide native splash once root view layout is done and app is ready
   const onLayoutRootView = useCallback(async () => {
     if (appIsReady) {
       console.log('🎬 Hiding native splash');
@@ -73,16 +70,10 @@ export default function App() {
     }
   }, [appIsReady]);
 
-  // While loading, keep native splash visible by returning null
+  // While loading, keep native splash by returning null
   if (!appIsReady) {
     console.log('⌛ App not ready yet: showing native splash');
     return null;
-  }
-
-  // Show animated splash once after readiness
-  if (!animDone) {
-    console.log('🎨 Showing animated splash overlay');
-    return <AnimatedSplash onEnd={() => setAnimDone(true)} />;
   }
 
   console.log('🏠 Rendering main navigation');

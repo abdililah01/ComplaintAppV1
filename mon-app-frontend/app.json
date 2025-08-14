@@ -3,34 +3,41 @@
     "name": "mon-app-frontend",
     "slug": "mon-app-frontend",
     "version": "1.0.0",
+    "owner": "egawilldoit1",
     "orientation": "portrait",
+
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "image": "./assets/new-splash.png",
-          "resizeMode": "contain",
-          "backgroundColor": "#FFFFFF",
+          "image": "./assets/splash-cover.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#F3F6FA",
           "dark": {
-            "image": "./assets/new-splash.png",
-            "resizeMode": "contain",
-            "backgroundColor": "#FFFFFF"
+            "image": "./assets/splash-cover.png",
+            "resizeMode": "cover",
+            "backgroundColor": "#0E1116"
           }
         }
       ]
     ],
+
     "splash": {
-      "image": "./assets/new-splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "image": "./assets/splash-cover.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#F3F6FA"
     },
+
     "assetBundlePatterns": ["**/*"],
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.egawilldoit.monappfrontend"
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -38,13 +45,11 @@
       },
       "package": "com.egawilldoit.monappfrontend"
     },
+
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "extra": {
-      "eas": {
-        "projectId": "8e2a4741-3e79-447a-ac98-00375a444fff"
-      }
-    }
+
+    "extra": {}
   }
 }
