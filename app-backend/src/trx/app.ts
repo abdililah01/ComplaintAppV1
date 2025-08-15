@@ -14,6 +14,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 
 import complaintsRouter from './routes/complaints.routes';
+import authRoutes from './routes/auth.routes';
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use(express.urlencoded({ extended: false, limit: '1mb' }));
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
 /* ───────── Routes ───────── */
+app.use(authRoutes);
 app.use('/api/v1', complaintsRouter);
 
 /* ───────── Static downloads (block stored XSS) ───────── */

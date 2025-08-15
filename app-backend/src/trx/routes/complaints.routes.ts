@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { validate } from '../middleware/validate';
 import { createComplaintSchema } from '../schemas/complaint.schema';
 import { createComplaintHandler } from '../controllers/complaint.controller';
+import { requireAuth } from '../middleware/requireAuth';
 
 import { upload, validateAndProcessUploads } from '../middleware/upload.middleware';
 import { saveAttachments } from '../controllers/file.controller';
@@ -22,6 +23,7 @@ const uploadLimiter = rateLimit({
 /** POST /api/v1/complaints (create) */
 router.post(
   '/complaints',
+  requireAuth,
   validate(createComplaintSchema),
   createComplaintHandler
 );
@@ -33,6 +35,7 @@ router.post(
  */
 router.post(
   '/files',
+  requireAuth,
   uploadLimiter,
   upload.array('files', 5),
   validateAndProcessUploads,

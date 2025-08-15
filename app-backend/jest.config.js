@@ -10,5 +10,6 @@ module.exports = {
       '**/src/tests/*.spec.ts',        // for files in src/tests/ (including SQLi)
       '**/src/trx/__tests__/**/*.spec.ts' // specific for trx folder if needed
     ],
+    setupFilesAfterEnv: ['<rootDir>/tests/jest.env.setup.js'],
   };
   

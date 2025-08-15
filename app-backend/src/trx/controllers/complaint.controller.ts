@@ -38,9 +38,10 @@ const isNestedBody = (b: CreateComplaintBody): b is CreateComplaintBody & { comp
 export const createComplaintHandler = async (req: Request, res: Response) => {
   // validate.ts replaces req.body with the parsed Zod object
   const body = req.body as CreateComplaintBody;
+  const jti = (req as any).auth?.jti || null;
 
   try {
-    const params = mapBodyToSpParams(body);
+    const params = mapBodyToSpParams(body, jti);
 
     // tests mock this to return: [{ IdPlainte: BigInt(...), TrackingCode: '...' }]
     const rows: any = await createComplaintInDB(params);
@@ -66,7 +67,7 @@ export const createComplaintHandler = async (req: Request, res: Response) => {
 
 /* ───────────────────────────── Mapper ───────────────────────────── */
 
-function mapBodyToSpParams(body: CreateComplaintBody) {
+function mapBodyToSpParams(body: CreateComplaintBody, sessionId: string | null) {
   if (isNestedBody(body)) {
     const b: any = body;
     const pl = b.plaignant ?? {};
@@ -118,7 +119,7 @@ function mapBodyToSpParams(body: CreateComplaintBody) {
       ResumePlainte: esc(pld.resume, 4000) ?? '',
 
       /* ─── MISC ───────────────────────────────────────────────── */
-      SessionId: esc(b.sessionId, 500) ?? 'session-from-api',
+      SessionId: sessionId,
     } as const;
   }
 
@@ -144,6 +145,6 @@ function mapBodyToSpParams(body: CreateComplaintBody) {
     IdJuridiction: Number(f.IdJuridiction),
     ResumePlainte: esc(f.ResumePlainte, 4000) ?? '',
 
-    SessionId: esc(f.SessionId, 500) ?? 'session-from-api',
+    SessionId: sessionId,
   };
 }

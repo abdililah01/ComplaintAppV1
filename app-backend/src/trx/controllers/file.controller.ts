@@ -34,6 +34,7 @@ export async function saveAttachments(
   next: NextFunction,
 ): Promise<void> {
   try {
+    const jti = (req as any).auth?.jti || null;
     const files = req.processedFiles;
     const idPlainte = Number(req.body.complaintId);
 
@@ -60,6 +61,7 @@ export async function saveAttachments(
             IdPlainte: idPlainte,
             extensionPJ: extname(filename).slice(1) || null,
             TypePieceJointe: mimetype,
+            SessionId: jti,
           },
           select: pieceJointeSelect, // ← response excludes Contenu
         });

@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import 'react-native-get-random-values';
 import { v4 as uuid } from 'uuid';
+import { ensureAccessToken, dropAccessToken } from '../auth/session';
 
 /** ---------- Read + normalize LAN base URL (Expo public var) ---------- */
 const RAW = String(process.env.EXPO_PUBLIC_TRX_API_BASE_URL ?? '').trim();
@@ -20,6 +21,20 @@ export const trxApi: AxiosInstance = axios.create({
   headers: {
     'x-session-id': sessionId,
   },
+});
+
+trxApi.interceptors.request.use(async (cfg) => {
+  const at = await ensureAccessToken();
+  cfg.headers = cfg.headers || {};
+  cfg.headers.Authorization = `Bearer ${at}`;
+  return cfg;
+});
+
+trxApi.interceptors.response.use(undefined, async (err) => {
+  if (err?.response?.status === 401) {
+    await dropAccessToken(); // force a re-issue next time
+  }
+  return Promise.reject(err);
 });
 
 // Debug

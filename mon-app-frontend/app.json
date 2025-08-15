@@ -5,10 +5,8 @@
     "version": "1.0.0",
     "owner": "egawilldoit1",
     "orientation": "portrait",
-
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-
     "plugins": [
       [
         "expo-splash-screen",
@@ -24,16 +22,16 @@
             "imageWidth": 400
           }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
-
-    "assetBundlePatterns": ["**/*"],
-
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.egawilldoit.monappfrontend"
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -41,11 +39,9 @@
       },
       "package": "com.egawilldoit.monappfrontend"
     },
-
     "web": {
       "favicon": "./assets/favicon.png"
     },
-
     "extra": {}
   }
 }
