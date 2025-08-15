@@ -4,12 +4,11 @@ import path from 'path';
 import os from 'os';
 import * as fsp from 'fs/promises';
 
-// IMPORTANT: match your actual export path
-import app from '../src/trx/app';
+/* ─────────────────────────── Mocks ───────────────────────────
+   Put mocks BEFORE importing the app, so module init sees them.
+---------------------------------------------------------------- */
 
-/* ─────────────────────────── Mocks ─────────────────────────── */
-
-// 1) Mock the stored-proc service used by the controller
+// 1) Mock the stored-proc service used by the complaint controller
 jest.mock('../src/trx/services/complaint.service', () => ({
   __esModule: true,
   createComplaintInDB: jest.fn().mockResolvedValue([
@@ -35,31 +34,46 @@ jest.mock('../src/common/prisma', () => ({
   },
 }));
 
-// 3) Mock AV (toggle per test)
+// 3) Mock AV (Option A): provide scanBufferDetailed + keep scanBuffer
 jest.mock('../src/trx/services/clamav.service', () => ({
   __esModule: true,
-  scanBuffer: jest.fn().mockResolvedValue(true), // true = clean, false = infected
+  scanBufferDetailed: jest.fn().mockResolvedValue({ status: 'CLEAN' }),
+  scanBuffer: jest.fn().mockResolvedValue(true),
 }));
 
-// 4) Mock sharp to avoid native deps in CI
+// 4) Mock sharp to support .rotate().jpeg().toBuffer() chain
 jest.mock('sharp', () => {
-  return jest.fn(() => ({
-    rotate: () => ({
+  const factory = () => {
+    const chain: any = {
+      rotate: () => chain,
+      jpeg: () => chain,
       toBuffer: async () => Buffer.from('normalized-image'),
-    }),
-  }));
+    };
+    return chain;
+  };
+  // support ESM default and CJS require
+  return Object.assign(factory, { default: factory });
 });
 
-// 5) Mock file-type (dynamic import inside middleware)
-import { fileTypeFromBuffer } from 'file-type';
+// 5) Mock file-type (dynamic import + named & default exports)
+const ftObj = { fileTypeFromBuffer: jest.fn() };
 jest.mock('file-type', () => ({
   __esModule: true,
-  fileTypeFromBuffer: jest.fn(),
+  ...ftObj,                 // named: fileTypeFromBuffer
+  default: ftObj,           // default.fileTypeFromBuffer
 }));
 
-// access to mocks
+/* ───────────────────────── Imports (after mocks) ───────────── */
+
+import app from '../src/trx/app';
+import * as fileTypeMod from 'file-type';
+import * as avSvc from '../src/trx/services/clamav.service';
+
+// Access the single shared mock function
+const fileTypeFromBuffer = fileTypeMod.fileTypeFromBuffer as unknown as jest.Mock;
+
+// (optional) access complaint service mock for call assertions
 const complaintSvc = require('../src/trx/services/complaint.service');
-const avSvc = require('../src/trx/services/clamav.service');
 
 /* ───────────────────────── Helpers ────────────────────────── */
 const makeTempFile = async (name: string, contents: Buffer | string) => {
@@ -86,7 +100,7 @@ describe('TRX API Endpoints', () => {
   /* ── POST /api/v1/complaints (nested) ────────────────────── */
   describe('POST /api/v1/complaints (nested payload)', () => {
     it('creates a complaint (individual) and returns id + tracking', async () => {
-      (fileTypeFromBuffer as jest.Mock).mockResolvedValue({ ext: 'jpg', mime: 'image/jpeg' });
+      fileTypeFromBuffer.mockResolvedValue({ ext: 'jpg', mime: 'image/jpeg' });
 
       const payload = {
         complainantType: 'individual',
@@ -148,7 +162,6 @@ describe('TRX API Endpoints', () => {
   describe('POST /api/v1/complaints (legacy/flat payload)', () => {
     it('accepts flat shape and returns id + tracking', async () => {
       const legacy = {
-        /* plaignant (P) */
         PlaignantTypePersonne: 'P',
         PlaignantNom: 'Jane',
         PlaignantPrenom: 'Smith',
@@ -157,16 +170,10 @@ describe('TRX API Endpoints', () => {
         PlaignantIdVille: 1,
         PlaignantIdSituationResidence: 1,
         PlaignantIdProfession: 1,
-
-        /* défendeur */
         DefendeurTypePersonne: 'I',
-
-        /* plainte */
         IdObjetInjustice: 1,
         IdJuridiction: 1,
         ResumePlainte: 'Résumé…',
-
-        /* misc */
         SessionId: 'session-legacy',
       };
 
@@ -184,9 +191,13 @@ describe('TRX API Endpoints', () => {
 
   /* ── POST /api/v1/files ──────────────────────────────────── */
   describe('POST /api/v1/files', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
     it('uploads JPEG and PDF and returns attachments', async () => {
       // dynamic sniff (middleware)
-      (fileTypeFromBuffer as jest.Mock)
+      fileTypeFromBuffer
         .mockResolvedValueOnce({ ext: 'jpg', mime: 'image/jpeg' })
         .mockResolvedValueOnce({ ext: 'pdf', mime: 'application/pdf' });
 
@@ -207,7 +218,7 @@ describe('TRX API Endpoints', () => {
     // ✅ Option A: sniff-level rejection → stable 415
     it('rejects unsupported file content (sniff mismatch → 415)', async () => {
       // Make fileFilter happy (claims PDF) but sniff returns text/plain
-      (fileTypeFromBuffer as jest.Mock).mockResolvedValue({
+      fileTypeFromBuffer.mockResolvedValue({
         ext: 'txt',
         mime: 'text/plain',
       });
@@ -223,8 +234,13 @@ describe('TRX API Endpoints', () => {
     });
 
     it('rejects infected files (AV)', async () => {
-      (fileTypeFromBuffer as jest.Mock).mockResolvedValue({ ext: 'jpg', mime: 'image/jpeg' });
-      avSvc.scanBuffer.mockResolvedValueOnce(false); // malware
+      fileTypeFromBuffer.mockResolvedValue({ ext: 'jpg', mime: 'image/jpeg' });
+
+      // ⬇️ IMPORTANT: use the detailed scanner mock (Option A)
+      (avSvc.scanBufferDetailed as unknown as jest.Mock).mockResolvedValueOnce({
+        status: 'FOUND',
+        signature: 'Eicar-Test-Signature',
+      });
 
       const jpgPath = await makeTempFile('bad.jpg', Buffer.from([0xff, 0xd8, 0xff]));
 
@@ -238,7 +254,7 @@ describe('TRX API Endpoints', () => {
     });
 
     it('rejects when complaintId is missing', async () => {
-      (fileTypeFromBuffer as jest.Mock).mockResolvedValue({ ext: 'jpg', mime: 'image/jpeg' });
+      fileTypeFromBuffer.mockResolvedValue({ ext: 'jpg', mime: 'image/jpeg' });
 
       const jpgPath = await makeTempFile('a.jpg', Buffer.from([0xff, 0xd8, 0xff]));
 
@@ -256,7 +272,7 @@ describe('TRX API Endpoints', () => {
     it('returns 404 for unknown paths', async () => {
       const res = await request(app).get('/non-existent-route');
       expect(res.statusCode).toBe(404);
-      expect(typeof res.body).toBe('object'); // body shape differs from lookup app
+      expect(typeof res.body).toBe('object');
     });
   });
 });
