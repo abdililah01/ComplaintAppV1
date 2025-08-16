@@ -5,10 +5,11 @@ on:
   push:
     branches:
       - develop
-      - 'feature/*'
+      - feat/jwt-auth
   pull_request:
     branches:
       - develop
+      - feat/jwt-auth
 
 jobs:
   android-release:
