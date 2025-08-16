@@ -109,9 +109,7 @@ mon-app-frontend/metro-bundler-cache-*
 mon-app-frontend/.cache/
 
 # Configs d’app contenant potentiellement des variables (selon votre setup)
-mon-app-frontend/app.config.ts
-mon-app-frontend/app.config.js
-mon-app-frontend/app.json
+
 
 # ===================================================================
 # Divers / temporaires

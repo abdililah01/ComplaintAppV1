@@ -1,60 +1,54 @@
-// mon-app-frontend/src/auth/session.ts
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 const INSTALL_KEY = 'installId';
 const AT_KEY = 'accessToken';
 
-// Use a bare client for /auth/anon (NO interceptors here).
+// Bare client just for /auth/anon (no interceptors)
 const baseURL = process.env.EXPO_PUBLIC_TRX_API_BASE_URL ?? '';
-const bootstrap = axios.create({ baseURL, timeout: 15000 });
+const bootstrap = axios.create({
+  baseURL: baseURL || undefined,
+  timeout: 15000,
+});
 
 let inflight: Promise<string> | null = null;
 
-function genInstallId(): string {
-  const rnd =
-    (global as any).crypto?.randomUUID?.() ||
-    `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random()
-      .toString(36)
-      .slice(2)}`;
-  return String(rnd);
-}
-
 async function getInstallId(): Promise<string> {
-  // Coerce null → '' so `id` is always a string
-  let id: string = (await SecureStore.getItemAsync(INSTALL_KEY)) ?? '';
-
-  // Generate and persist if missing
-  if (id.length === 0) {
-    id = genInstallId();
-    await SecureStore.setItemAsync(INSTALL_KEY, id);
+  let id: string | null = await SecureStore.getItemAsync(INSTALL_KEY);
+  if (!id) {
+    const newId = uuidv4();
+    await SecureStore.setItemAsync(INSTALL_KEY, newId);
+    id = newId;
   }
-
-  // Ensure it passes backend zod .min(10)
+  // Ensure it meets backend zod .min(10)
   if (id.length < 10) {
-    id = id.padEnd(12, 'x');
-    await SecureStore.setItemAsync(INSTALL_KEY, id);
+    const padded = id.padEnd(12, 'x');
+    await SecureStore.setItemAsync(INSTALL_KEY, padded);
+    return padded;
   }
-
-  return id; // ✅ always string
+  return id;
 }
 
 export async function ensureAccessToken(): Promise<string> {
   const cached = await SecureStore.getItemAsync(AT_KEY);
-  if (cached && cached.length > 0) return cached;
+  if (cached) return cached;
 
-  if (inflight) return inflight; // de-dup parallel calls
+  if (inflight) return inflight; // de-dup races
 
   inflight = (async () => {
     const installId = await getInstallId();
+    if (!baseURL) {
+      throw new Error(
+        'TRX baseURL missing (EXPO_PUBLIC_TRX_API_BASE_URL). Cannot mint token.'
+      );
+    }
     const { data } = await bootstrap.post('/auth/anon', { installId });
-    const token: string =
-      typeof data?.accessToken === 'string' ? data.accessToken : '';
-
-    if (token.length < 20) {
+    const token: unknown = data?.accessToken;
+    if (typeof token !== 'string' || token.length < 20) {
       throw new Error('Invalid access token from /auth/anon');
     }
-
     await SecureStore.setItemAsync(AT_KEY, token);
     return token;
   })();

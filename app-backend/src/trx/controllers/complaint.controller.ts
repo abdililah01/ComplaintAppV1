@@ -43,12 +43,12 @@ export const createComplaintHandler = async (req: Request, res: Response) => {
   try {
     const params = mapBodyToSpParams(body, jti);
 
-    // tests mock this to return: [{ IdPlainte: BigInt(...), TrackingCode: '...' }]
-    const rows: any = await createComplaintInDB(params);
-    const row = Array.isArray(rows) ? rows[0] : rows;
+    // In prod, this executes the real SP; in tests it's mocked
+    const result: any = await createComplaintInDB(params);
 
-    const complaintIdRaw = row?.IdPlainte ?? row?.complaintId;
-    const trackingCode = row?.TrackingCode ?? row?.trackingCode;
+    // Accept both shapes (old tests vs. real SP return)
+    const complaintIdRaw = result?.complaintId ?? result?.IdPlainte;
+    const trackingCode   = result?.trackingCode ?? result?.TrackingCode;
 
     if (complaintIdRaw == null || !trackingCode) {
       return res.status(500).json({ error: 'Stored procedure returned no data' });
@@ -59,9 +59,10 @@ export const createComplaintHandler = async (req: Request, res: Response) => {
       trackingCode,
     });
   } catch (err: any) {
-    // keep logs minimal (no PII)
+    // Minimal log; add detail in non-prod to help local debugging
+    const detail = process.env.NODE_ENV !== 'production' ? String(err?.message ?? err) : undefined;
     console.error({ err: { message: err?.message, code: err?.code } }, 'createComplaint failed');
-    return res.status(500).json({ error: 'Failed to create complaint' });
+    return res.status(500).json({ error: 'Failed to create complaint', detail });
   }
 };
 
@@ -72,7 +73,6 @@ function mapBodyToSpParams(body: CreateComplaintBody, sessionId: string | null) 
     const b: any = body;
     const pl = b.plaignant ?? {};
     const def = b.defendeur ?? {};
-    // accept either `plainte` or `plainteDetails`
     const pld = b.plainteDetails ?? b.plainte ?? {};
 
     const PlaignantTypePersonne: 'P' | 'M' = b.complainantType === 'individual' ? 'P' : 'M';
@@ -84,7 +84,6 @@ function mapBodyToSpParams(body: CreateComplaintBody, sessionId: string | null) 
       PlaignantPrenom: esc(pl.prenom, 200),
       PlaignantCIN: esc(pl.cin, 50),
 
-      // accept raisonSociale OR nomCommercial (RN)
       PlaignantNomCommercial: esc(pl.nomCommercial ?? pl.raisonSociale, 600),
       PlaignantNumeroRC: esc(pl.numeroRC, 100),
 
@@ -101,7 +100,7 @@ function mapBodyToSpParams(body: CreateComplaintBody, sessionId: string | null) 
       PlaignantSiegeSocial: esc(pl.siegeSocial, 1000),
       PlaignantNomRepresentantLegal: esc(pl.nomRepresentantLegal ?? pl.representantLegal, 600),
 
-      /* ─── DÉFENDEUR (flat or nested) ─────────────────────────── */
+      /* ─── DÉFENDEUR ─────────────────────────────────────────── */
       DefendeurTypePersonne: def.type,
       DefendeurNom: esc(def.personnePhysique?.nom ?? def.nom, 200),
       DefendeurNomCommercial: esc(
@@ -115,7 +114,6 @@ function mapBodyToSpParams(body: CreateComplaintBody, sessionId: string | null) 
       /* ─── PLAINTE ─────────────────────────────────────────────── */
       IdObjetInjustice: Number(pld.idObjetInjustice),
       IdJuridiction: Number(pld.idJuridiction),
-      // critical: store escaped value to neutralize HTML/JS at rest
       ResumePlainte: esc(pld.resume, 4000) ?? '',
 
       /* ─── MISC ───────────────────────────────────────────────── */
@@ -123,7 +121,7 @@ function mapBodyToSpParams(body: CreateComplaintBody, sessionId: string | null) 
     } as const;
   }
 
-  // Legacy flat body → sanitize strings before passing through
+  // Legacy flat body
   const f: any = body;
   return {
     ...f,

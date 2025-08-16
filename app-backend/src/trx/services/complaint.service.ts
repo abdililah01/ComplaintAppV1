@@ -5,7 +5,7 @@ export type CreateComplaintParams = {
   PlaignantNom: string | null;
   PlaignantPrenom: string | null;
   PlaignantCIN: string | null;
-  PlaignantNomCommercial: string | null;     // ✅ matches SP
+  PlaignantNomCommercial: string | null;
   PlaignantNumeroRC: string | null;
   PlaignantIdPays: number;
   PlaignantIdVille: number;
@@ -20,7 +20,7 @@ export type CreateComplaintParams = {
 
   DefendeurTypePersonne: 'P' | 'M' | 'I';
   DefendeurNom: string | null;
-  DefendeurNomCommercial: string | null;     // ✅ matches SP
+  DefendeurNomCommercial: string | null;
   DefendeurNumeroRC: string | null;
 
   IdObjetInjustice: number;
@@ -31,7 +31,7 @@ export type CreateComplaintParams = {
 };
 
 export async function createComplaint(p: CreateComplaintParams) {
-  // The stored proc SELECTs: complaintId (BIGINT) and trackingCode (NVARCHAR)
+  // Your SP SELECTs: complaintId (BIGINT), trackingCode (NVARCHAR)
   const rows: Array<{ complaintId: bigint; trackingCode: string }> =
     await prisma.$queryRaw`
       EXEC dbo.sp_Mobile_CreatePlainte
@@ -74,5 +74,5 @@ export async function createComplaint(p: CreateComplaintParams) {
   };
 }
 
-// Export alias so Jest mock in tests/trx.test.ts works
+// Alias so old tests that mock createComplaintInDB still work
 export const createComplaintInDB = createComplaint;
