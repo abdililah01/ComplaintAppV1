@@ -3,20 +3,14 @@ name: Android CI (Release Build)
 on:
   workflow_dispatch:
   push:
-    branches:
-      - develop
-      - feat/jwt-auth
+    branches: [develop, feat/jwt-auth]
   pull_request:
-    branches:
-      - develop
-      - feat/jwt-auth
+    branches: [develop, feat/jwt-auth]
 
 jobs:
   android-release:
     runs-on: ubuntu-latest
     env:
-      # -- Required repo secrets --
-      # see: Repo > Settings > Secrets and variables > Actions
       TRX_RELEASE_BASE_URL: ${{ secrets.TRX_RELEASE_BASE_URL }}
       LOOKUP_RELEASE_BASE_URL: ${{ secrets.LOOKUP_RELEASE_BASE_URL }}
       ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -34,6 +28,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+
+      # Optional: npm cache
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('mon-app-frontend/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
 
       # 3) Install JS deps
       - name: Install frontend dependencies
@@ -57,7 +60,7 @@ jobs:
         working-directory: mon-app-frontend
         run: npx expo prebuild --platform android --clean
 
-      # (Optional safety) Ensure cleartext HTTP remains enabled for LAN QA
+      # (Optional) Keep cleartext in release for LAN QA; remove later for prod HTTPS-only
       - name: Ensure cleartext HTTP for LAN
         working-directory: mon-app-frontend
         shell: bash
@@ -77,21 +80,48 @@ jobs:
             sed -i '0,/<application /s//<application android:networkSecurityConfig="@xml\/network_security_config" /' "$MANIFEST"
           fi
 
-      # 6) Java
+      # 6) Java (AGP 8.8.x wants JDK 17)
       - name: Setup Java (JDK 17)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 7) Android SDK
-      - name: Setup Android SDK
+      # 7) Android SDK base (platform + build-tools)
+      - name: Setup Android SDK (API 35 / build-tools 35.0.0)
         uses: android-actions/setup-android@v3
         with:
           api-level: 35
           build-tools: '35.0.0'
-          ndk: '27.1.12297006'
+          ndk: ''       # we'll install NDK explicitly below
           cmake: false
+
+      # 7.1) Accept licenses (prevents sdkmanager prompts)
+      - name: Accept SDK licenses
+        run: yes | "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --licenses
+
+      # 7.2) Install exact NDK and export env (matches your successful develop logs)
+      - name: Install NDK r27.1.12297006 and export env
+        shell: bash
+        run: |
+          "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" "ndk;27.1.12297006" || true
+          ls -la "${ANDROID_SDK_ROOT}/ndk" || true
+          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/27.1.12297006" >> $GITHUB_ENV
+          echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT}/ndk/27.1.12297006" >> $GITHUB_ENV
+
+      # 7.3) Pin NDK in gradle.properties so Gradle never tries to auto-install
+      - name: Pin android.ndkVersion in gradle.properties
+        working-directory: mon-app-frontend/android
+        shell: bash
+        run: |
+          GP="gradle.properties"
+          if grep -q '^android.ndkVersion=' "$GP"; then
+            sed -i 's/^android.ndkVersion=.*/android.ndkVersion=27.1.12297006/' "$GP"
+          else
+            echo -e "\nandroid.ndkVersion=27.1.12297006" >> "$GP"
+          fi
+          echo "==== gradle.properties (snippet) ===="
+          grep -E '^(org.gradle.jvmargs|reactNativeArchitectures|newArchEnabled|hermesEnabled|android.ndkVersion)=' "$GP" || true
 
       # 8) Decode keystore and expose Gradle envs
       - name: Decode keystore & set signing env
@@ -105,18 +135,33 @@ jobs:
           echo "ANDROID_KEY_PASSWORD=${ANDROID_KEY_PASSWORD}" >> $GITHUB_ENV
           ls -l release.keystore
 
+      - name: Make gradlew executable
+        working-directory: mon-app-frontend/android
+        run: chmod +x ./gradlew
+
+      # Optional: Gradle cache
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('mon-app-frontend/android/**/*.gradle*', 'mon-app-frontend/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
       # 9) Clean & build Release (APK + AAB)
       - name: Gradle clean
         working-directory: mon-app-frontend/android
-        run: ./gradlew clean --no-daemon
+        run: ./gradlew clean --no-daemon --stacktrace
 
       - name: Assemble Release APK
         working-directory: mon-app-frontend/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Bundle Release AAB
         working-directory: mon-app-frontend/android
-        run: ./gradlew bundleRelease --no-daemon
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
 
       # 10) Upload artifacts
       - name: Upload Release APK
