@@ -1,4 +1,3 @@
-// app-backend/src/trx/middlewares/upload.middleware.ts
 import multer, { FileFilterCallback } from 'multer';
 import { Request, Response, NextFunction } from 'express';
 import sharp from 'sharp';
@@ -12,7 +11,6 @@ let fileTypeFromBuffer: (b: Buffer) => Promise<FileTypeResult | undefined>;
 async function ensureFileType(): Promise<void> {
   if (!fileTypeFromBuffer) {
     const mod = await import('file-type');
-    // handle both modern and legacy exports
     fileTypeFromBuffer =
       (mod as any).fileTypeFromBuffer ?? (mod as any).fromBuffer;
   }
@@ -34,13 +32,20 @@ function extForMime(mime: string): '.jpg' | '.pdf' {
 }
 
 /** -------------------- Multer (memory) config ----------------------------- */
+/**
+ * Only enforce:
+ *  - correct field name ("files")
+ *  - max counts/size (via limits)
+ * DO NOT enforce MIME here (some clients label PDFs as octet-stream).
+ */
 export const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE, files: MAX_FILES },
   fileFilter: (_req, file, cb: FileFilterCallback) => {
-    // Hint for clients; real enforcement is via magic bytes below
-    if (ALLOWED_MIME.has(file.mimetype)) cb(null, true);
-    else cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
+    if (file.fieldname !== 'files') {
+      return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', file.fieldname));
+    }
+    cb(null, true);
   },
 });
 /** ------------------------------------------------------------------------- */
@@ -48,54 +53,54 @@ export const upload = multer({
 /**
  * Validate and process uploaded files:
  * - Strict magic-byte type check (PDF/JPEG only)
- * - Real AV scan via clamd with detailed status (CLEAN | FOUND | ERROR)
+ * - AV scan via clamd (will return 415 on malware; 503 if scanner down unless you set AV_FAIL_OPEN=true)
  * - JPEG normalization (autorotate, strip metadata, re-encode)
  * - Safe randomized filename with correct extension
  * Produces req.processedFiles for the controller layer to persist.
  */
 export async function validateAndProcessUploads(
-  req: Request,
+  req: Request & { processedFiles?: ProcessedFile[] },
   res: Response,
   next: NextFunction,
 ): Promise<void> {
   try {
     const files = req.files as Express.Multer.File[] | undefined;
     if (!files?.length) {
-      res.status(400).json({ error: 'NO_FILES' });
-      return;
+      return void res.status(400).json({ error: 'NO_FILES' });
     }
 
     await ensureFileType();
-
     const processed: ProcessedFile[] = [];
 
     for (const file of files) {
-      // 1) Strict magic-byte detection
+      // 1) Magic-byte detection (authoritative)
       const ft = await fileTypeFromBuffer(file.buffer);
       if (!ft || !ALLOWED_MIME.has(ft.mime)) {
-        res.status(415).json({
+        return void res.status(415).json({
           error: 'UNSUPPORTED_FILE_TYPE',
           file: file.originalname,
+          detected: ft?.mime || null,
         });
-        return;
       }
 
-      // 2) Antivirus scan with detailed result
+      // 2) Antivirus scan
       const av = await scanBufferDetailed(file.buffer);
       if (av.status === 'FOUND') {
-        res.status(415).json({
+        return void res.status(415).json({
           error: 'MALWARE_DETECTED',
           file: file.originalname,
+          signature: av.reason || undefined,
         });
-        return;
       }
       if (av.status === 'ERROR') {
-        // Clamd not reachable / protocol issue — surface as service unavailable
-        res.status(503).json({
-          error: 'AV_UNAVAILABLE',
-          details: av.reason || av.raw || '',
-        });
-        return;
+        const FAIL_OPEN = String(process.env.AV_FAIL_OPEN || '').toLowerCase() === 'true';
+        if (!FAIL_OPEN) {
+          return void res.status(503).json({
+            error: 'AV_UNAVAILABLE',
+            details: av.reason || av.raw || '',
+          });
+        }
+        // fail-open in dev if configured
       }
 
       // 3) JPEG normalization (autorotate + strip metadata)
@@ -117,7 +122,7 @@ export async function validateAndProcessUploads(
       });
     }
 
-    (req as Request & { processedFiles: ProcessedFile[] }).processedFiles = processed;
+    req.processedFiles = processed;
     next();
   } catch (err) {
     next(err);

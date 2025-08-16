@@ -6,7 +6,10 @@ import { createComplaintSchema } from '../schemas/complaint.schema';
 import { createComplaintHandler } from '../controllers/complaint.controller';
 import { requireAuth } from '../middleware/requireAuth';
 
-import { upload, validateAndProcessUploads } from '../middleware/upload.middleware';
+import {
+  upload,
+  validateAndProcessUploads,
+} from '../middleware/upload.middleware';
 import { saveAttachments } from '../controllers/file.controller';
 
 const router = Router();
@@ -14,7 +17,7 @@ const router = Router();
 /** Per-route rate limiter for uploads */
 const uploadLimiter = rateLimit({
   windowMs: Number(process.env.UPLOAD_RATE_WINDOW_MS || 60_000), // 1 min window
-  max: Number(process.env.UPLOAD_RATE_MAX || 30),                // 30 requests/min/IP
+  max: Number(process.env.UPLOAD_RATE_MAX || 30),                // 30 reqs/min/IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'RATE_LIMITED' },
@@ -28,18 +31,14 @@ router.post(
   createComplaintHandler
 );
 
-/** POST /api/v1/files (attachments)
- *  - rate-limited
- *  - <= 5 files (also enforced in multer limits)
- *  - validateAndProcessUploads does magic-byte + AV + jpeg normalize
- */
+/** POST /api/v1/files (attachments) */
 router.post(
   '/files',
-  requireAuth,
+  requireAuth,                // <-- ensures req.auth.jti is present
   uploadLimiter,
   upload.array('files', 5),
-  validateAndProcessUploads,
-  saveAttachments
+  validateAndProcessUploads,  // magic-bytes + AV + jpeg normalize => req.processedFiles
+  saveAttachments             // writes DB rows with SessionId = JWT jti
 );
 
 export default router;

@@ -1,69 +1,89 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../../common/prisma';
-import type { Prisma } from '@prisma/client';           // ✅ type-only import is fine now
+import type { Prisma } from '@prisma/client';
 import { mkdir, writeFile } from 'fs/promises';
 import { resolve, join, extname } from 'path';
 
-/* ---------- Local helper types ---------------------------------------- */
+/* ---------- Types shared with upload.middleware ------------------------ */
 export interface ProcessedFile {
-  filename: string;
-  buffer: Buffer;
-  mimetype: string;
+  filename: string;    // randomized safe name with proper extension
+  buffer: Buffer;      // AV-checked + normalized bytes
+  mimetype: string;    // authoritative MIME from magic bytes
 }
 
 interface RequestWithFiles extends Request {
   processedFiles?: ProcessedFile[];
-  body: { complaintId: string | number; [k: string]: unknown };
+  body: { complaintId?: string | number; [k: string]: unknown };
+  // `requireAuth` attaches `auth` (AccessClaims) to req
+  auth?: { jti?: string } | any;
 }
 
 /* ---------- Prisma typed select (omit Contenu) ------------------------- */
-// Build a plain object that *satisfies* the Prisma select type (no runtime Prisma usage)
 const pieceJointeSelect = {
   Id: true,
   IdPlainte: true,
   extensionPJ: true,
   TypePieceJointe: true,
+  SessionId: true,
 } satisfies Prisma.PieceJointeSelect;
 
-type PieceJointePublic = Prisma.PieceJointeGetPayload<{ select: typeof pieceJointeSelect }>;
+type PieceJointePublic = Prisma.PieceJointeGetPayload<{
+  select: typeof pieceJointeSelect;
+}>;
 
 /* ---------- Controller ------------------------------------------------- */
 export async function saveAttachments(
   req: RequestWithFiles,
   res: Response,
-  next: NextFunction,
+  next: NextFunction
 ): Promise<void> {
   try {
-    const jti = (req as any).auth?.jti || null;
-    const files = req.processedFiles;
-    const idPlainte = Number(req.body.complaintId);
-
-    if (!files?.length || Number.isNaN(idPlainte)) {
-      res.status(400).json({ error: 'Missing files or invalid complaintId' });
+    // MUST have a verified token with a session id
+    const jti: string | undefined = (req as any)?.auth?.jti;
+    if (!jti) {
+      res.status(401).json({ error: 'UNAUTHORIZED' });
       return;
     }
 
-    // 1) ensure upload directory exists
+    const idPlainte = Number(req.body?.complaintId);
+    if (!idPlainte || Number.isNaN(idPlainte)) {
+      res.status(400).json({ error: 'INVALID_COMPLAINT_ID' });
+      return;
+    }
+
+    // Prefer processed files from the AV/magic-bytes step; fallback to raw multer if needed
+    const files: ProcessedFile[] | undefined =
+      req.processedFiles ||
+      ((req.files as any as Express.Multer.File[] | undefined)?.map((f) => ({
+        filename: f.originalname,
+        buffer: f.buffer,
+        mimetype: f.mimetype,
+      })) ?? undefined);
+
+    if (!files?.length) {
+      res.status(400).json({ error: 'NO_FILES' });
+      return;
+    }
+
+    // Optional disk copy alongside DB BLOB (keeps your current behavior)
     const uploadDir = resolve(__dirname, '../../../uploads');
     await mkdir(uploadDir, { recursive: true });
 
-    // 2) save files + metadata inside one DB transaction
-    const saved = await prisma.$transaction(async (tx) => {
+    const saved: PieceJointePublic[] = await prisma.$transaction(async (tx) => {
       const out: PieceJointePublic[] = [];
 
-      for (const { filename, buffer, mimetype } of files) {
-        // optional: keep disk copy alongside DB blob
-        await writeFile(join(uploadDir, filename), buffer);
+      for (const file of files) {
+        await writeFile(join(uploadDir, file.filename), file.buffer);
 
         const pj = await tx.pieceJointe.create({
           data: {
-            Contenu: buffer, // stored in DB, but NOT returned
             IdPlainte: idPlainte,
-            extensionPJ: extname(filename).slice(1) || null,
-            TypePieceJointe: mimetype,
-            SessionId: jti,
+            Contenu: file.buffer,                                  // stored in DB
+            extensionPJ: extname(file.filename).slice(1) || null,
+            TypePieceJointe: file.mimetype || null,
+            SessionId: jti,                                         // <-- stamp session
           },
-          select: pieceJointeSelect, // ← response excludes Contenu
+          select: pieceJointeSelect, // never return the BLOB in API response
         });
 
         out.push(pj);
